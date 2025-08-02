@@ -52,7 +52,7 @@ El proyecto utiliza las siguientes crates (especificadas en `Cargo.toml`):
 
 ## 🛠️ Criterios de Aceptación
 
-Estos son los criterios que el programa debe cumplir para considerarse completo. Úsalos como una guía para desarrollar o verificar el proyecto:
+Estos son los criterios que el programa debe cumplir para considerarse completo.
 
 1. **Inicialización del Programa**:
    - Al iniciar, carga las tareas desde `tasks.json` si existe.
@@ -113,7 +113,6 @@ Este proyecto te ayudará a aprender:
 
 ## 📈 Ideas para Extender el Proyecto
 
-Si quieres seguir aprendiendo, prueba a añadir:
 - Filtros por prioridad o estado (usa closures y `filter`).
 - Edición de tareas existentes (modificar descripción o prioridad).
 - Fechas de vencimiento (con la crate `chrono`).
@@ -132,5 +131,3 @@ Si quieres seguir aprendiendo, prueba a añadir:
 Este proyecto está bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
-
-¡Disfruta aprendiendo Rust con este proyecto! 🦀
