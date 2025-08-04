@@ -76,6 +76,18 @@ impl Displayer for ConsoleDisplayer {
                     self.exit();
                     break;
                 },
+                Ok(MenuOption::Undo) => {
+                    if let Err(e) = self.manager.undo() {
+                        println!("Undo failed: {}", e);
+                    }
+                },
+                Ok(MenuOption::Redo) => {
+                    match self.manager.redo() {
+                        Ok(true) => println!("Redo operation successful."),
+                        Ok(false) => println!("Redo operation failed, nothing to redo."),
+                        _ => println!("Redo failed"),
+                    }
+                },
                 Err(e) => println!("Error: {}", e),
             }
 
@@ -89,7 +101,9 @@ impl Displayer for ConsoleDisplayer {
         println!("3. Complete Task");
         println!("4. Remove Task");
         println!("5. Exit");
-        print!("Enter your choice (1-5): ");
+        println!("[U] Undo");
+        println!("[R] Redo");
+        println!("Enter your choice (1-5): ");
 
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)
@@ -101,6 +115,8 @@ impl Displayer for ConsoleDisplayer {
             "3" => Ok(MenuOption::CompleteTask),
             "4" => Ok(MenuOption::RemoveTask),
             "5" => Ok(MenuOption::Exit),
+            "U"|"u" => Ok(MenuOption::Undo),
+            "R"|"r" => Ok(MenuOption::Redo),
             _ => Err("Invalid option, please try again.".to_string()),
         }
     }

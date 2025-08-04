@@ -15,8 +15,8 @@ pub trait ManagerTrait {
     fn get_tasks(&self) -> &Vec<Task>;
     fn complete_task(&mut self, task_id: u32);
     fn remove_task(&mut self, task_id: u32);
-    fn undo(&mut self);
-    fn redo(&mut self);
+    fn undo(&mut self) -> Result<bool, String>;
+    fn redo(&mut self) -> Result<bool, String>;
 }
 
 impl ManagerTrait for Manager {
@@ -59,7 +59,7 @@ impl ManagerTrait for Manager {
         self.redo_stack.clear();
     }
 
-    fn undo(&mut self) {
+    fn undo(&mut self) -> Result<bool, String> {
         if let Some((command, undo_data)) = self.undo_stack.pop() {
             match undo_data {
                 UndoData::AddTask { id } => {
@@ -85,10 +85,14 @@ impl ManagerTrait for Manager {
                 },
             }
             self.redo_stack.push((command, undo_data));
+            Ok(true)
+        } else {
+            // No action to undo
+            return Ok(false);
         }
     }
 
-    fn redo(&mut self) {
+    fn redo(&mut self) -> Result<bool, String> {
         if let Some((command, undo_data)) = self.redo_stack.pop() {
             match &command {
                 Command::AddTask { description, priority } => {
@@ -102,6 +106,10 @@ impl ManagerTrait for Manager {
                 },
             }
             self.undo_stack.push((command, undo_data));
+            Ok(true)
+        } else {
+            // No action to redo
+            return Ok(false); 
         }
     }
 }
