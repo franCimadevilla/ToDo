@@ -5,6 +5,6 @@ use serde::{Serialize, Deserialize};
 pub struct Task {
     pub id: u32,
     pub description: String,
-    pub priority: Priority
-    pub completed: bool
+    pub priority: Priority,
+    pub completed: bool,
 }

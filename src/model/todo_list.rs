@@ -1,38 +1,36 @@
 use crate::model::task::Task;
 use crate::model::priority::Priority;
-use serde_json::{to_string, from_str};
 use serde::{Serialize, Deserialize};
-use std::fs::{read_to_string, write};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Todo_list {
-    tasks: Vec<Task>
+pub struct TodoList {
+    pub tasks: Vec<Task>
 }
 
-impl Todo_list {
+impl TodoList {
     /// Create a new empty todo list
     pub fn new() -> Self {
-        Todo_list {
-            tasks: Vec<Task>::new()
+        TodoList {
+            tasks: Vec::<Task>::new()
         }
     }
 
     /// Add a new task to the todo list
-    pub fn add_task(&mut self, description:String, priority:Priority) {
+    pub fn add_task(&mut self, description:String, priority:Priority) -> u32{
+        let id_new = Uuid::new_v4().as_u128() as u32; 
         self.tasks.push(Task {
-            id: self.tasks.len() as i32 + 1, // Simple ID generation
+            id : id_new,
             description,
             priority,
             completed: false
         });
+        id_new
     }
 
-    /// Shows all the tasks in the todo list
-    pub fn list_tasks(&self) {
-        for task in &self.tasks {
-            println!("ID: {}, Description: {}, Priority: {:?}, Completed: {}", 
-                     task.id, task.description, task.priority, task.completed);  //TODO: Extract prints to a different layer
-        }
+    /// Return the tasks in the todo list
+    pub fn get_tasks(&self) -> &Vec<Task> {
+        &self.tasks
     }
 
     /// Mark a task as completed by ID
