@@ -13,8 +13,8 @@ pub trait ManagerTrait {
     fn new() -> Self;
     fn add_task(&mut self, description: String, priority: Priority);
     fn get_tasks(&self) -> &Vec<Task>;
-    fn complete_task(&mut self, task_id: u32);
-    fn remove_task(&mut self, task_id: u32);
+    fn complete_task(&mut self, task_id: String);
+    fn remove_task(&mut self, task_id: String);
     fn undo(&mut self) -> Result<bool, String>;
     fn redo(&mut self) -> Result<bool, String>;
 }
@@ -45,14 +45,14 @@ impl ManagerTrait for Manager {
         self.todo_list.get_tasks()
     }
 
-    fn complete_task(&mut self, task_id: u32) {
+    fn complete_task(&mut self, task_id: String) {
         let mut command = Command::CompleteTask { id: task_id };
         let undo_data = command.execute( self);
         self.undo_stack.push((command, undo_data));
         self.redo_stack.clear();
     }
 
-    fn remove_task(&mut self, task_id: u32) {
+    fn remove_task(&mut self, task_id: String) {
         let mut command = Command::RemoveTask { id: task_id };
         let undo_data = command.execute(self);
         self.undo_stack.push((command, undo_data));
@@ -61,30 +61,32 @@ impl ManagerTrait for Manager {
 
     fn undo(&mut self) -> Result<bool, String> {
         if let Some((command, undo_data)) = self.undo_stack.pop() {
-            match undo_data {
+            
+            let redo_undo_data_copy = undo_data.clone();
+            match &undo_data {
                 UndoData::AddTask { id } => {
-                    self.todo_list.remove_task(id);
+                    self.todo_list.remove_task(id.clone());
                 },
                 UndoData::CompleteTask { id, previous_state } => {
-                    if previous_state {
-                        self.todo_list.complete_task(id);
+                    if *previous_state {
+                        self.todo_list.complete_task(id.clone());
                     } else {
-                        self.todo_list.complete_task(id);
+                        self.todo_list.complete_task(id.clone());
                     }
                 },
                 UndoData::RemoveTask { id } => {
                     self.todo_list.add_task(
                         self.get_tasks().iter()
-                            .find(|task| task.id == id)
+                            .find(|task| task.id == *id)
                             .map_or("Unknown".to_string(), |task| task.description.clone()),
 
                         self.get_tasks().iter()
-                            .find(|task| task.id == id)
+                            .find(|task| task.id == *id)
                             .map_or(Priority::Low, |task| task.priority),
                     );
                 },
             }
-            self.redo_stack.push((command, undo_data));
+            self.redo_stack.push((command, redo_undo_data_copy));
             Ok(true)
         } else {
             // No action to undo
@@ -99,10 +101,10 @@ impl ManagerTrait for Manager {
                     self.todo_list.add_task(description.clone(), priority.clone().clone());
                 },
                 Command::CompleteTask { id } => {
-                    self.todo_list.complete_task(*id);
+                    self.todo_list.complete_task(id.clone());
                 },
                 Command::RemoveTask { id } => {
-                    self.todo_list.remove_task(*id);
+                    self.todo_list.remove_task(id.clone());
                 },
             }
             self.undo_stack.push((command, undo_data));

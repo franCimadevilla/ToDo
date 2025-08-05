@@ -1,30 +1,32 @@
 use crate::model::task::Task;
 use crate::model::priority::Priority;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TodoList {
-    pub tasks: Vec<Task>
+    pub tasks: Vec<Task>,
+    pub next_id: u32, 
 }
 
 impl TodoList {
     /// Create a new empty todo list
     pub fn new() -> Self {
         TodoList {
-            tasks: Vec::<Task>::new()
+            tasks: Vec::<Task>::new(),
+            next_id : 1,
         }
     }
 
     /// Add a new task to the todo list
-    pub fn add_task(&mut self, description:String, priority:Priority) -> u32{
-        let id_new = Uuid::new_v4().as_u128() as u32; 
+    pub fn add_task(&mut self, description:String, priority:Priority) -> String{
+        let id_new = format!("{:X}", self.next_id);
         self.tasks.push(Task {
-            id : id_new,
+            id : id_new.clone(),
             description,
             priority,
             completed: false
         });
+        self.next_id += 1;
         id_new
     }
 
@@ -34,7 +36,7 @@ impl TodoList {
     }
 
     /// Mark a task as completed by ID
-    pub fn complete_task(&mut self, id: u32) {
+    pub fn complete_task(&mut self, id: String) {
 
         /* Some(T) is part of the Option<T> enum in Rust
         Option<T> can be Some(T) or None and the code below 
@@ -53,7 +55,7 @@ impl TodoList {
     }
 
     /// Remove a task from the todo list by ID
-    pub fn remove_task(&mut self, id: u32) {
+    pub fn remove_task(&mut self, id: String) {
         if let Some(pos) = self.tasks.iter().position(|t| t.id == id) {
             self.tasks.remove(pos);
             println!("Task with ID {} removed.", id);  //TODO: Extract prints to a different layer
