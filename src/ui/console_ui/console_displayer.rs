@@ -5,16 +5,13 @@ use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 
 /// ConsoleDisplayer implements the Displayer trait for console output.
-pub struct ConsoleDisplayer {
-    pub manager: Manager,
-}
+pub struct ConsoleDisplayer;
 
 impl Displayer for ConsoleDisplayer {
     fn new() -> Self {
-        let manager = Manager::new();
-        ConsoleDisplayer { manager }
+        ConsoleDisplayer
     }
-    fn run(&mut self) {
+    fn run(&mut self, manager : &mut Manager) {
         println!("Welcome to the ToDo console application!");
 
         loop {
@@ -38,12 +35,12 @@ impl Displayer for ConsoleDisplayer {
                             Priority::Low
                         }
                     };
-                    self.manager.add_task(description.trim().to_string(), priority);
+                    manager.add_task(description.trim().to_string(), priority);
                     
                 },
                 Ok(MenuOption::ListTasks) => {
                     println!("You selected: List Tasks");
-                    for task in self.manager.get_tasks() {
+                    for task in manager.get_tasks() {
                     println!("ID: {}, Description: {}, Priority: {:?}, Completed: {}", 
                      task.id, task.description, task.priority, task.completed);
                 }
@@ -54,11 +51,13 @@ impl Displayer for ConsoleDisplayer {
                     let mut id_input = String::new();
                     std::io::stdin().read_line(&mut id_input)
                         .expect("Failed to read line");
-                    let id = id_input.trim().parse();
-                    match id {
-                        Ok(id) => self.manager.complete_task(id),
-                        Err(_) => println!("Invalid ID, please try again."),
+                    
+                    if manager.complete_task(id_input.clone()) {
+                        println!("Task with ID {} marked as completed.", id_input);
+                    } else {
+                        println!("Task with ID {} not found.", id_input);
                     }
+                    
                 },
                 Ok(MenuOption::RemoveTask) => {
                     println!("You selected: Remove Task");
@@ -66,23 +65,25 @@ impl Displayer for ConsoleDisplayer {
                     let mut id_input = String::new();
                     std::io::stdin().read_line(&mut id_input)
                         .expect("Failed to read line");
-                    let id = id_input.trim().parse();
-                    match id { 
-                        Ok(id) => self.manager.remove_task(id),
-                        Err(_) => println!("Invalid ID, please try again."),
+                    
+                    if manager.remove_task(id_input.clone()) {
+                        println!("Task with ID {} removed.", id_input);
+                    } else {
+                        println!("Task with ID {} not found.", id_input);
                     }
+                    
                 },
                 Ok(MenuOption::Exit) => {
                     self.exit();
                     break;
                 },
                 Ok(MenuOption::Undo) => {
-                    if let Err(e) = self.manager.undo() {
+                    if let Err(e) = manager.undo() {
                         println!("Undo failed: {}", e);
                     }
                 },
                 Ok(MenuOption::Redo) => {
-                    match self.manager.redo() {
+                    match manager.redo() {
                         Ok(true) => println!("Redo operation successful."),
                         Ok(false) => println!("Redo operation failed, nothing to redo."),
                         _ => println!("Redo failed"),
@@ -121,6 +122,9 @@ impl Displayer for ConsoleDisplayer {
         }
     }
 
+    fn notify(&self, message: &str) {
+        println!("[{}]", message);
+    }
     fn exit(&self) {
         println!("Exiting ToDo application... Goodbye!");
     }
