@@ -115,3 +115,85 @@ impl TodoList {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_new_todo_list() {
+        let todo_list = TodoList::new();
+        assert_eq!(todo_list.tasks.len(), 0);
+        assert_eq!(todo_list.next_id, 1);
+        assert_eq!(todo_list.file_name, "todo_list.json");
+    }
+
+    #[test]
+    fn test_add_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::High);
+        assert_eq!(todo_list.tasks.len(), 1);
+        assert_eq!(todo_list.next_id, 2);
+        assert_eq!(todo_list.tasks[0].id, id);
+        assert_eq!(todo_list.tasks[0].description, "Test task");
+        assert_eq!(todo_list.tasks[0].priority, Priority::High);
+        assert_eq!(todo_list.tasks[0].completed, false);
+    }
+
+    #[test]
+    fn test_complete_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::Medium);
+        todo_list.complete_task(id.clone());
+        assert_eq!(todo_list.tasks[0].completed, true);
+        // Toggle again to test flipping back
+        todo_list.complete_task(id.clone());
+        assert_eq!(todo_list.tasks[0].completed, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "IllegalState Error: Task with ID notfound not found")]
+    fn test_complete_task_not_found() {
+        let mut todo_list = TodoList::new();
+        todo_list.complete_task("notfound".to_string());
+    }
+
+    #[test]
+    fn test_remove_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::Low);
+        todo_list.remove_task(id.clone());
+        assert_eq!(todo_list.tasks.len(), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "IllegalState Error: Task with ID notfound not found")]
+    fn test_remove_task_not_found() {
+        let mut todo_list = TodoList::new();
+        todo_list.remove_task("notfound".to_string());
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut todo_list = TodoList::new();
+        let test_file = "test_todo_list.json";
+        todo_list.file_name = test_file.to_string();
+
+        // Add a task and save
+        todo_list.add_task("Test task".to_string(), Priority::High);
+        todo_list.save();
+
+        // Load into a new TodoList
+        let mut new_todo_list = TodoList::new();
+        new_todo_list.file_name = test_file.to_string();
+        new_todo_list.load();
+
+        assert_eq!(new_todo_list.tasks.len(), 1);
+        assert_eq!(new_todo_list.tasks[0].description, "Test task");
+        assert_eq!(new_todo_list.tasks[0].priority, Priority::High);
+
+        // Clean up
+        fs::remove_file(test_file).expect("Failed to clean up test file");
+    }
+}

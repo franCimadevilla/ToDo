@@ -35,7 +35,7 @@ impl ManagerTrait for Manager {
     }
 
     fn run(&mut self) {
-        if let Some(displayer) = self.displayer.as_ref() {
+        if let Some(displayer) = self.displayer.as_mut() {
             if let Err(_) = self.todo_list.try_load() {
                 displayer.notify("No previous todo list found... Created a new one🦀");
             }
@@ -140,5 +140,110 @@ impl ManagerTrait for Manager {
             // No action to redo
             return Ok(false); 
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ui::console_ui::menu_options::MenuOption;
+
+    // Mock Displayer para pruebas
+    struct MockDisplayer;
+    impl Displayer for MockDisplayer {
+        fn new() -> Self { MockDisplayer }
+        fn run(&mut self, _manager: &mut Manager) {}
+        fn display(&mut self) -> Result<MenuOption, String> { Ok(MenuOption::Exit) }
+        fn notify(&mut self, _message: &str) {}
+        fn exit(&mut self) {}
+    }
+
+    #[test]
+    fn test_new_manager() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let manager = Manager::new(displayer);
+        assert_eq!(manager.todo_list.tasks.len(), 0);
+        assert_eq!(manager.undo_stack.len(), 0);
+        assert_eq!(manager.redo_stack.len(), 0);
+        assert!(manager.displayer.is_some());
+    }
+
+    #[test]
+    fn test_add_task() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        manager.add_task("Test task".to_string(), Priority::High);
+        assert_eq!(manager.todo_list.tasks.len(), 1);
+        assert_eq!(manager.undo_stack.len(), 1);
+        assert_eq!(manager.redo_stack.len(), 0);
+        assert_eq!(manager.todo_list.tasks[0].description, "Test task");
+        assert_eq!(manager.todo_list.tasks[0].priority, Priority::High);
+    }
+
+    #[test]
+    fn test_complete_task() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        let id = manager.todo_list.add_task("Test task".to_string(), Priority::Medium);
+        let result = manager.complete_task(id.clone());
+        assert!(result);
+        assert_eq!(manager.todo_list.tasks[0].completed, true);
+        assert_eq!(manager.undo_stack.len(), 1);
+        assert_eq!(manager.redo_stack.len(), 0);
+    }
+
+    #[test]
+    fn test_complete_task_not_found() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        let result = manager.complete_task("notfound".to_string());
+        assert!(!result);
+        assert_eq!(manager.undo_stack.len(), 0);
+    }
+
+    #[test]
+    fn test_remove_task() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        let id = manager.todo_list.add_task("Test task".to_string(), Priority::Low);
+        let result = manager.remove_task(id.clone());
+        assert!(result);
+        assert_eq!(manager.todo_list.tasks.len(), 0);
+        assert_eq!(manager.undo_stack.len(), 1);
+        assert_eq!(manager.redo_stack.len(), 0);
+    }
+
+    #[test]
+    fn test_undo_add_task() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        manager.add_task("Test task".to_string(), Priority::High);
+        let result = manager.undo().expect("Undo failed");
+        assert!(result);
+        assert_eq!(manager.todo_list.tasks.len(), 0);
+        assert_eq!(manager.undo_stack.len(), 0);
+        assert_eq!(manager.redo_stack.len(), 1);
+    }
+
+    #[test]
+    fn test_redo_add_task() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        manager.add_task("Test task".to_string(), Priority::High);
+        manager.undo().expect("Undo failed");
+        let result = manager.redo().expect("Redo failed");
+        assert!(result);
+        assert_eq!(manager.todo_list.tasks.len(), 1);
+        assert_eq!(manager.undo_stack.len(), 1);
+        assert_eq!(manager.redo_stack.len(), 0);
+    }
+
+    #[test]
+    fn test_undo_empty() {
+        let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
+        let mut manager = Manager::new(displayer);
+        let result = manager.undo().expect("Undo failed");
+        assert!(!result);
     }
 }
