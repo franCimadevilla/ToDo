@@ -6,6 +6,6 @@ pub trait Displayer: Send + Sync {
 
     fn run(&mut self, manager: &mut Manager);
     fn display(&mut self) -> Result<MenuOption, String>;  
-    fn notify(&mut self, message: &str);  
-    fn exit(&mut self);  
+    fn notify(&mut self, message: &str) -> Result<(), String>;  
+    fn exit(&mut self) -> Result<(), String>;  
 }
