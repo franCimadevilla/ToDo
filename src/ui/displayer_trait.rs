@@ -1,8 +1,11 @@
 use crate::ui::console_ui::menu_options::MenuOption;
+use crate::service::manager::Manager;
 
-pub trait Displayer {
-    fn new() -> Self;
-    fn run(&mut self);
-    fn display(&self) -> Result<MenuOption, String>;
-    fn exit(&self);
+pub trait Displayer: Send + Sync {
+    fn new() -> Self where Self: Sized;
+
+    fn run(&mut self, manager: &mut Manager);
+    fn display(&mut self) -> Result<MenuOption, String>;  
+    fn notify(&mut self, message: &str) -> Result<(), String>;  
+    fn exit(&mut self) -> Result<(), String>;  
 }

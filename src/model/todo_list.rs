@@ -1,31 +1,42 @@
 use crate::model::task::Task;
 use crate::model::priority::Priority;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TodoList {
-    pub tasks: Vec<Task>
+    pub tasks: Vec<Task>,
+    pub next_id: u32, 
+    pub file_name: String,
 }
 
 impl TodoList {
     /// Create a new empty todo list
     pub fn new() -> Self {
         TodoList {
-            tasks: Vec::<Task>::new()
+            tasks: Vec::<Task>::new(),
+            next_id : 1,
+            file_name: "todo_list.json".to_string(),
         }
     }
 
     /// Add a new task to the todo list
-    pub fn add_task(&mut self, description:String, priority:Priority) -> u32{
-        let id_new = Uuid::new_v4().as_u128() as u32; 
+    pub fn add_task(&mut self, description:String, priority:Priority) -> String{
+        let id_new = format!("{:X}", self.next_id);
         self.tasks.push(Task {
-            id : id_new,
+            id : id_new.clone(),
             description,
             priority,
             completed: false
         });
+        self.next_id += 1;
+        self.save();
         id_new
+    }
+
+    pub fn push_task(&mut self, task : Task) {
+        self.tasks.push(task);
+        self.save();
     }
 
     /// Return the tasks in the todo list
@@ -33,36 +44,35 @@ impl TodoList {
         &self.tasks
     }
 
-    /// Mark a task as completed by ID
-    pub fn complete_task(&mut self, id: u32) {
-
-        /* Some(T) is part of the Option<T> enum in Rust
-        Option<T> can be Some(T) or None and the code below 
-        checks if the task with the given ID exists if the 
-        expression returned is None then the else block is executed
-        */
+    /// Mark a task as completed/uncompleted by ID
+    pub fn toggle_task_status(&mut self, id: String) {
 
         // the if let with Option<T> is a way to match against the Some(T) variant
         if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
-            task.completed = true;
-            println!("Task with ID {} marked as completed.", id)    //TODO: Extract prints to a different layer
+            task.completed = !task.completed; 
+            self.save();
         } else {
-            println!("Task with ID {} not found.", id);
+            panic!("IllegalArgument Error: Task with ID {} not found when trying to toggle its state.", id);
         }
         
     }
 
     /// Remove a task from the todo list by ID
-    pub fn remove_task(&mut self, id: u32) {
+    pub fn remove_task(&mut self, id: String) {
         if let Some(pos) = self.tasks.iter().position(|t| t.id == id) {
             self.tasks.remove(pos);
-            println!("Task with ID {} removed.", id);  //TODO: Extract prints to a different layer
+            self.save();
         } else {
-            println!("Task with ID {} not found.", id);  
+            panic!("IllegalArgument Error: Task with ID {} not found when trying to remove.", id);  
         }
     }
 
-    /// Save the todo list into a JSON file
+    /// Save the todo list into the default JSON file name stored
+    pub fn save(&self) {
+        self.save_to_file(&self.file_name).expect("Failed to save todo list to the default file");
+    }
+
+    /// Save the todo list into a JSON file where the file name is passed as a parameter
     pub fn save_to_file(&self, file_name: &str) -> Result<(), String> {
         let json_data = serde_json::to_string(&self.tasks)
             .map_err(|e| format!("Failed to serialize tasks: {}", e))?; 
@@ -72,8 +82,23 @@ impl TodoList {
         std::fs::write(file_name, json_data)
             .map_err(|e| format!("Failed to write to the file {} Err: {}", file_name, e))?;
         
-        println!("Todo list susccessfully saved to the file '{}'", file_name); //TODO: Extract to a different layer
         Ok(())
+    }
+
+    pub fn try_load(&mut self) -> Result<(), ()> {
+        if !Path::new(&self.file_name).exists() {
+            Err(())
+        } else {
+            self.load();
+            Ok(())
+        }
+    }
+
+    pub fn load(&mut self) {
+        let file_name = self.file_name.clone();
+        if let Err(_) = self.load_from_file(&file_name) {
+            self.save(); 
+        }
     }
 
     //Load the todo list from a JSON file
@@ -86,7 +111,105 @@ impl TodoList {
 
         self.tasks = deserialized_tasks;
         
-        println!("Todo list successfully loaded from the file '{}'", file_name); //TODO: Extract to a different layer
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_new_todo_list() {
+        let todo_list = TodoList::new();
+        assert_eq!(todo_list.tasks.len(), 0);
+        assert_eq!(todo_list.next_id, 1);
+        assert_eq!(todo_list.file_name, "todo_list.json");
+    }
+
+    #[test]
+    fn test_add_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::High);
+        assert_eq!(todo_list.tasks.len(), 1);
+        assert_eq!(todo_list.next_id, 2);
+        assert_eq!(todo_list.tasks[0].id, id);
+        assert_eq!(todo_list.tasks[0].description, "Test task");
+        assert_eq!(todo_list.tasks[0].priority, Priority::High);
+        assert_eq!(todo_list.tasks[0].completed, false);
+    }
+
+    #[test]
+    fn test_complete_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::Medium);
+        todo_list.toggle_task_status(id.clone());
+        assert_eq!(todo_list.tasks[0].completed, true);
+        // Toggle again to test flipping back
+        todo_list.toggle_task_status(id.clone());
+        assert_eq!(todo_list.tasks[0].completed, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "IllegalArgument Error: Task with ID notfound not found")]
+    fn test_complete_task_not_found() {
+        let mut todo_list = TodoList::new();
+        todo_list.toggle_task_status("notfound".to_string());
+    }
+
+    #[test]
+    fn test_remove_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".to_string(), Priority::Low);
+        todo_list.remove_task(id.clone());
+        assert_eq!(todo_list.tasks.len(), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "IllegalArgument Error: Task with ID notfound not found")]
+    fn test_remove_task_not_found() {
+        let mut todo_list = TodoList::new();
+        todo_list.remove_task("notfound".to_string());
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut todo_list = TodoList::new();
+        let test_file = "test_todo_list.json";
+        todo_list.file_name = test_file.to_string();
+
+        // Add a task and save
+        todo_list.add_task("Test task".to_string(), Priority::High);
+        todo_list.save();
+
+        // Load into a new TodoList
+        let mut new_todo_list = TodoList::new();
+        new_todo_list.file_name = test_file.to_string();
+        new_todo_list.load();
+
+        assert_eq!(new_todo_list.tasks.len(), 1);
+        assert_eq!(new_todo_list.tasks[0].description, "Test task");
+        assert_eq!(new_todo_list.tasks[0].priority, Priority::High);
+
+        // Clean up
+        fs::remove_file(test_file).expect("Failed to clean up test file");
+    }
+
+    #[test]
+    fn test_try_load_no_file() {
+        let mut todo_list = TodoList::new();
+        let result = todo_list.load_from_file("no_exist.json");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_try_load_invalid_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("todo.json");
+        std::fs::write(&file_path, "invalid json").unwrap();
+        let mut todo_list = TodoList::new();
+        let result = todo_list.load_from_file("todo.json");
+        assert!(result.is_err());
     }
 }

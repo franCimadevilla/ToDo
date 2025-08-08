@@ -2,6 +2,8 @@
 
 ![Rust](https://img.shields.io/badge/Rust-1.80+-orange?logo=rust)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+[![codecov](https://codecov.io/gh/francimadevilla/ToDo/branch/main/graph/badge.svg)](https://codecov.io/gh/francimadevilla/ToDo)
+
 
 Bienvenido/a al proyecto **To-Do List en Rust**, un mini-proyecto de consola diseñado para aprender y practicar las características fundamentales del lenguaje de programación **Rust**. Este proyecto es ideal para principiantes que desean explorar conceptos como *ownership*, *borrowing*, *structs*, *enums*, *pattern matching* y más, mientras construyen una aplicación práctica y funcional.
 
@@ -31,16 +33,21 @@ El objetivo de este proyecto es crear una aplicación de consola que permita ges
 ### Pasos para Configurar
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/<tu-usuario>/todo_list.git
-   cd todo_list
+   git clone https://github.com/franCimadevilla/ToDo.git
+   cd ToDo
    ```
 
 2. Compila y ejecuta el proyecto:
    ```bash
+   cargo build
+   .\target\debug\ToDo.exe
+   ```
+   o
+   ```bash
    cargo run
    ```
 
-3. (Opcional) Verifica el código con pruebas y formato:
+3. (Opcional) Verifica el código con las pruebas  y formato:
    ```bash
    cargo test
    cargo fmt
@@ -49,17 +56,18 @@ El objetivo de este proyecto es crear una aplicación de consola que permita ges
 ### Dependencias
 El proyecto utiliza las siguientes crates (especificadas en `Cargo.toml`):
 - `serde` y `serde_json`: Para serialización/deserialización de tareas en formato JSON.
+- `tempfile` : Para la creación de ficheros temporales con fines de testing.
 
 ## 🛠️ Criterios de Aceptación
 
 Estos son los criterios que el programa debe cumplir para considerarse completo.
 
 1. **Inicialización del Programa**:
-   - Al iniciar, carga las tareas desde `tasks.json` si existe.
-   - Si no existe o está corrupto, crea una nueva lista vacía y muestra: "No se encontró un archivo de tareas, creando una nueva lista."
+   - Al iniciar, carga las tareas desde `todo_list.json` si existe.
+   - Si no existe o está corrupto, crea un nuevo fichero donde almacenar las tareas.
 
 2. **Menú de Consola**:
-   - Muestra un menú con opciones: 1) Agregar tarea, 2) Listar tareas, 3) Completar tarea, 4) Eliminar tarea, 5) Salir.
+   - Muestra un menú con opciones: 1) Agregar tarea, 2) Listar tareas, 3) Completar tarea, 4) Eliminar tarea, 5) Salir, U) Deshacer R) Rehacer. 
    - Acepta entradas numéricas (1-5) y muestra un mensaje de error para entradas inválidas.
 
 3. **Agregar Tarea**:
@@ -87,9 +95,9 @@ Estos son los criterios que el programa debe cumplir para considerarse completo.
    - Muestra: "Tarea eliminada."
 
 7. **Persistencia de Datos**:
-   - Al salir, guarda la lista en `tasks.json` en formato JSON.
+   - Al salir, guarda la lista en `todo_list.json` en formato JSON.
    - Maneja errores al guardar y muestra: "Error al guardar: [detalle]."
-   - Carga correctamente las tareas desde `tasks.json` al iniciar.
+   - Carga correctamente las tareas desde `todo_list.json` al iniciar.
 
 8. **Manejo de Errores**:
    - Maneja entradas inválidas en el menú (texto en lugar de números).
