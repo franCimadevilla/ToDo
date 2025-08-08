@@ -1,10 +1,7 @@
-use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::console_displayer::ConsoleDisplayer;
-use crate::service::manager::{Manager, ManagerTrait};
+use to_do::service::manager::{Manager, ManagerTrait};
+use to_do::ui::console_ui::console_displayer::ConsoleDisplayer;
+use to_do::ui::displayer_trait::Displayer;
 
-pub mod ui;
-pub mod service;
-pub mod model;
 
 fn main() {
     let displayer: Box<dyn Displayer> = Box::new(ConsoleDisplayer::new());
