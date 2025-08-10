@@ -16,6 +16,7 @@ pub trait ManagerTrait {
     fn run(&mut self);
     fn add_task(&mut self, description: String, priority: Priority);
     fn get_tasks(&self) -> &Vec<Task>;
+    fn get_task(&self, id: &str) -> Option<&Task>;
     fn toggle_task_status(&mut self, task_id: String) -> bool;
     fn remove_task(&mut self, task_id: String) -> bool;
     fn undo(&mut self) -> Result<bool, String>;
@@ -65,6 +66,11 @@ impl ManagerTrait for Manager {
     /// Returns the tasks in the todo list.
     fn get_tasks(&self) -> &Vec<Task> {
         self.todo_list.get_tasks()
+    }
+
+    /// Get a task by ID
+    fn get_task(&self, id: &str) -> Option<&Task> {
+        self.todo_list.get_tasks().iter().find(|task| task.id == id)
     }
 
     /// Complete/Uncomplete a task by ID

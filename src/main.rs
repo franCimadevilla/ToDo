@@ -9,10 +9,10 @@ fn main() {
     let cli = Cli::parse();
     match &cli.command {
         Some(command) => {
-            let cli_displayer: Box<dyn Displayer> = Box::new(CliDisplayer::new());
+            let mut cli_displayer = CliDisplayer::new();
             let mut manager = Manager::new(Box::new(CliDisplayer::new()));
             manager.run();
-            cli.evaluate_command(command.clone(), &mut manager, cli_displayer);
+            cli.evaluate_command(command.clone(), &mut manager, &mut cli_displayer);
         }
         None => {
             let displayer: Box<dyn Displayer> = Box::new(ConsoleDisplayer::new());

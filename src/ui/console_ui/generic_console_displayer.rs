@@ -320,7 +320,7 @@ mod tests {
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let manager = create_manager_with_tasks();
         displayer.handle_list_tasks(&manager).expect("List tasks failed");
-        let output = String::from_utf8(displayer.output.into_inner()).unwrap();
+        let output = String::from_utf8(displayer.output.into_inner()).expect("Failed to convert output to string");
         assert!(output.contains("You selected: List Tasks"));
         assert!(output.contains("Test Task 1"));
         assert!(output.contains("Test Task 2"));
