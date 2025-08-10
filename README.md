@@ -1,141 +1,170 @@
-# To-Do List en Rust 🦀
+# To-Do List in Rust 🦀
 
 ![Rust](https://img.shields.io/badge/Rust-1.80+-orange?logo=rust)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 [![codecov](https://codecov.io/gh/francimadevilla/ToDo/branch/main/graph/badge.svg)](https://codecov.io/gh/francimadevilla/ToDo)
 
+Welcome to the **To-Do List in Rust** project, a console-based mini-project designed to learn and practice the fundamental features of the **Rust** programming language. This project is ideal for beginners who want to explore concepts such as *ownership*, *borrowing*, *structs*, *enums*, *pattern matching*, and more while building a practical and functional application.
 
-Bienvenido/a al proyecto **To-Do List en Rust**, un mini-proyecto de consola diseñado para aprender y practicar las características fundamentales del lenguaje de programación **Rust**. Este proyecto es ideal para principiantes que desean explorar conceptos como *ownership*, *borrowing*, *structs*, *enums*, *pattern matching* y más, mientras construyen una aplicación práctica y funcional.
+## 🎯 Objective
 
-## 🎯 Objetivo
+The goal of this project is to create a console application that manages a to-do list. Users can add, list, complete, and delete tasks, as well as save them to a JSON file for persistence. This project is designed to:
 
-El objetivo de este proyecto es crear una aplicación de consola que permita gestionar una lista de tareas (*To-Do List*). Los usuarios pueden agregar, listar, completar y eliminar tareas, además de guardarlas en un archivo JSON para persistencia. Este proyecto está diseñado para:
+- **Learn Rust**: Practice key language concepts in a hands-on way.
+- **Build something useful**: Create a simple tool for task management.
+- **Scalability**: Serve as a foundation for adding more features and continuing learning.
 
-- **Aprender Rust**: Practicar conceptos clave del lenguaje de forma práctica.
-- **Construir algo útil**: Crear una herramienta sencilla para gestionar tareas.
-- **Escalabilidad**: Servir como base para añadir más funcionalidades y seguir aprendiendo.
+## 🚀 Installation and Execution
 
-## 📋 Características
+### Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install) (version 1.80 or higher) and Cargo installed.
+- A text editor (recommended: [VS Code](https://code.visualstudio.com/) with the `rust-analyzer` extension).
 
-- Agregar tareas con descripción y prioridad (baja, media, alta).
-- Listar todas las tareas con su estado (pendiente o completada).
-- Marcar tareas como completadas.
-- Eliminar tareas por ID.
-- Guardar y cargar tareas desde un archivo JSON (`tasks.json`).
-- Interfaz de consola interactiva con un menú simple.
-
-## 🚀 Instalación y Ejecución
-
-### Prerrequisitos
-- [Rust](https://www.rust-lang.org/tools/install) (versión 1.80 o superior) y Cargo instalados.
-- Un editor de texto (recomendado: [VS Code](https://code.visualstudio.com/) con la extensión `rust-analyzer`).
-
-### Pasos para Configurar
-1. Clona este repositorio:
+### Setup Steps
+1. Clone this repository:
    ```bash
    git clone https://github.com/franCimadevilla/ToDo.git
    cd ToDo
    ```
 
-2. Compila y ejecuta el proyecto:
+2. Build and run the project:
    ```bash
    cargo build
    .\target\debug\ToDo.exe
    ```
-   o
+   or
    ```bash
    cargo run
    ```
 
-3. (Opcional) Verifica el código con las pruebas  y formato:
+3. (Optional) Run tests and format code:
    ```bash
    cargo test
    cargo fmt
    ```
 
-### Dependencias
-El proyecto utiliza las siguientes crates (especificadas en `Cargo.toml`):
-- `serde` y `serde_json`: Para serialización/deserialización de tareas en formato JSON.
-- `tempfile` : Para la creación de ficheros temporales con fines de testing.
+## 🖥️ Command Line Interface Commands
 
-## 🛠️ Criterios de Aceptación
+The `ToDo` application supports a Command Line Interface (CLI) for managing tasks directly from the terminal. The CLI is built using the `clap` crate and supports the following subcommands, each with specific arguments and options. The tasks are saved to `todo_list.json` for persistence.
 
-Estos son los criterios que el programa debe cumplir para considerarse completo.
+### Usage
+Run the program with a subcommand:
+```bash
+.\target\debug\ToDo.exe <SUBCOMMAND> [OPTIONS]
+```
+or
+```bash
+cargo run -- <SUBCOMMAND> [OPTIONS]
+```
 
-1. **Inicialización del Programa**:
-   - Al iniciar, carga las tareas desde `todo_list.json` si existe.
-   - Si no existe o está corrupto, crea un nuevo fichero donde almacenar las tareas.
+Use `--help` to see all available commands and options:
+```bash
+.\target\debug\ToDo.exe --help
+```
 
-2. **Menú de Consola**:
-   - Muestra un menú con opciones: 1) Agregar tarea, 2) Listar tareas, 3) Completar tarea, 4) Eliminar tarea, 5) Salir, U) Deshacer R) Rehacer. 
-   - Acepta entradas numéricas (1-5) y muestra un mensaje de error para entradas inválidas.
+### Available Subcommands
 
-3. **Agregar Tarea**:
-   - Permite ingresar una descripción (texto libre).
-   - Pide la prioridad (low, medium, high) y asigna `Low` por defecto si es inválida.
-   - Asigna un ID único a cada tarea (contador incremental).
-   - Agrega la tarea con estado `completed = false`.
-   - Muestra: "Tarea agregada."
+1. **`add`**
+   - **Description**: Adds a new task to the to-do list.
+   - **Arguments**:
+     - `-d, --description <DESCRIPTION>`: The task description (required, free text).
+     - `-p, --priority <PRIORITY>`: The task priority (`low`, `medium`, `high`). Case-insensitive (e.g., `Low` or `low`). Defaults to `low` if not specified or invalid.
+   - **Output**: Displays "Task added successfully."
+   - **Example**:
+     ```bash
+     .\target\debug\ToDo.exe add -d "Buy groceries" -p High
+     ```
+     Output: `Task added successfully.`
+     ```bash
+     cargo run -- add -d "Write report"  # Uses default priority (low)
+     ```
+     Output: `Task added successfully.`
 
-4. **Listar Tareas**:
-   - Muestra todas las tareas con ID, descripción, prioridad y estado (completada o pendiente).
-   - Si no hay tareas, muestra: "No hay tareas en la lista."
-   - Formato sugerido: "ID: X | Descripción: XXX | Prioridad: XXX | Estado: XXX".
+2. **`list`**
+   - **Description**: Lists tasks, optionally filtered by priority or completion status.
+   - **Arguments**:
+     - `-p, --priority <PRIORITY>`: Filter tasks by priority (`low`, `medium`, `high`). Case-insensitive. Optional.
+     - `-c, --completed <true|false>`: Filter tasks by completion status (`true` for completed, `false` for pending). Optional.
+   - **Output**:
+     - If tasks are found, displays the number of tasks and their details in the format: `ID: X, Description: XXX, Priority: XXX, Completed: XXX`.
+     - If no tasks match the filters, displays a message like "No tasks found" or "No tasks found with priority X and completed = Y."
+   - **Examples**:
+     ```bash
+     .\target\debug\ToDo.exe list
+     ```
+     Output: 
+     ```
+     2 tasks found
+     ID: 1, Description: Buy groceries, Priority: High, Completed: false
+     ID: 2, Description: Write report, Priority: Low, Completed: false
+     ```
+     ```bash
+     cargo run -- list -p Medium
+     ```
+     Output: `No tasks found with priority Medium`
+     ```bash
+     .\target\debug\ToDo.exe list -c true
+     ```
+     Output: `No tasks found with completed = true`
 
-5. **Completar Tarea**:
-   - Pide el ID de la tarea a completar.
-   - Marca la tarea como completada si el ID existe.
-   - Muestra un mensaje de error si el ID no existe: "Tarea con ID X no encontrada."
-   - Muestra: "Tarea completada."
+3. **`toggle-status`** (Aliases: `toggle`, `check`)
+   - **Description**: Toggles the completion status of a task (completed to pending or vice versa).
+   - **Arguments**:
+     - `-i, --id <ID>`: The ID of the task to toggle (required, positive integer).
+   - **Output**:
+     - On success: "Task status toggled successfully."
+     - On error (invalid ID): "Error: Task with ID X not found."
+   - **Examples**:
+     ```bash
+     .\target\debug\ToDo.exe toggle-status -i 1
+     ```
+     Output: `Task status toggled successfully.`
+     ```bash
+     cargo run -- toggle -i 1
+     ```
+     Output: `Task status toggled successfully.`
+     ```bash
+     .\target\debug\ToDo.exe check -i 999
+     ```
+     Output: `Error: Task with ID 999 not found`
 
-6. **Eliminar Tarea**:
-   - Pide el ID de la tarea a eliminar.
-   - Elimina la tarea si el ID existe.
-   - Muestra un mensaje de error si el ID no existe: "Tarea con ID X no encontrada."
-   - Muestra: "Tarea eliminada."
+4. **`remove`**
+   - **Description**: Deletes a task from the list.
+   - **Arguments**:
+     - `-i, --id <ID>`: The ID of the task to delete (required, positive integer).
+   - **Output**:
+     - On success: "Task removed successfully."
+     - On error (invalid ID): "Error: Task with ID X not found."
+   - **Example**:
+     ```bash
+     .\target\debug\ToDo.exe remove -i 1
+     ```
+     Output: `Task removed successfully.`
+     ```bash
+     cargo run -- remove -i 999
+     ```
+     Output: `Error: Task with ID 999 not found`
 
-7. **Persistencia de Datos**:
-   - Al salir, guarda la lista en `todo_list.json` en formato JSON.
-   - Maneja errores al guardar y muestra: "Error al guardar: [detalle]."
-   - Carga correctamente las tareas desde `todo_list.json` al iniciar.
+### Notes
+- **Case Insensitivity**: Priority arguments (`low`, `medium`, `high`) are case-insensitive (e.g., `Low` and `low` are equivalent).
+- **Task Persistence**: All tasks are saved to `todo_list.json` after each operation (`add`, `toggle-status`, `remove`) and loaded on program startup.
+- **Error Handling**: Invalid inputs (e.g., non-numeric IDs, invalid priorities) are handled gracefully with appropriate error messages.
+- **Interactive Mode**: Run the program without arguments (`.\target\debug\ToDo.exe`) to enter interactive mode, where you can select options from a menu.
 
-8. **Manejo de Errores**:
-   - Maneja entradas inválidas en el menú (texto en lugar de números).
-   - Maneja prioridades inválidas al agregar tareas.
-   - Maneja IDs inválidos al completar/eliminar tareas.
-   - Maneja errores al leer/escribir el archivo JSON.
+## 🧰 Dependencies
+The project uses the following crates (specified in `Cargo.toml`):
+- `serde` and `serde_json`: For serialization/deserialization of tasks in JSON format.
+- `tempfile`: For creating temporary files for testing purposes.
+- `clap`: For parsing command-line arguments passed to the program.
 
-9. **Robustez**:
-   - El programa no se cierra por entradas incorrectas.
-   - Usa `Result` y `Option` para manejar errores de forma segura.
-   - Usa referencias mutables (`&mut`) correctamente.
-
-## 🌟 Conceptos de Rust Practicados
-
-Este proyecto te ayudará a aprender:
-- **Ownership y Borrowing**: Gestión de la lista de tareas con referencias mutables.
-- **Enums y Pattern Matching**: Uso de `Priority` y `match` para manejar comandos.
-- **Manejo de Errores**: Uso de `Result` y `Option` para entradas y archivos.
-- **Serialización**: Guardar/cargar datos con `serde` y `serde_json`.
-- **Entrada/Salida**: Interacción con la consola (`std::io`) y archivos (`std::fs`).
-
-## 📈 Ideas para Extender el Proyecto
-
-- Filtros por prioridad o estado (usa closures y `filter`).
-- Edición de tareas existentes (modificar descripción o prioridad).
-- Fechas de vencimiento (con la crate `chrono`).
-- Interfaz de consola avanzada con la crate `clap`.
-- Hilos (`std::thread`) para recordatorios en segundo plano.
-
-## 📚 Recursos
-- [Documentación oficial de Rust](https://doc.rust-lang.org)
+## 📚 Resources
+- [Official Rust Documentation](https://doc.rust-lang.org)
 - [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
-- [Rust Community](https://users.rust-lang.org) para dudas y soporte.
+- [Rust Community](https://users.rust-lang.org) for questions and support.
+- [Clap - Rust](https://docs.rs/clap/latest/clap/)
 
-## 🤝 Contribuciones
-¡Este es un proyecto de aprendizaje! Si tienes sugerencias o mejoras, siéntete libre de abrir un *issue* o un *pull request* en GitHub.
+## 🤝 Contributions
+This is a learning project! If you have suggestions or improvements, feel free to open an *issue* or a *pull request* on GitHub.
 
-## 📜 Licencia
-Este proyecto está bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE) para más detalles.
-
----
+## 📜 License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
