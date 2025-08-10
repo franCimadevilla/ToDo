@@ -1,0 +1,66 @@
+name: Create and Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build and Release Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary_ext: ''
+            archive_ext: tar.gz
+            content_type: application/gzip
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_ext: .exe
+            archive_ext: zip
+            content_type: application/zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Install zip (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install zip -y
+
+      - name: Prepare binary
+        shell: bash
+        run: |
+          BINARY_NAME=ToDo${{ matrix.binary_ext }}
+          mv target/${{ matrix.target }}/release/ToDo${{ matrix.binary_ext }} .
+          if [ "${{ matrix.archive_ext }}" = "tar.gz" ]; then
+            tar -czf ToDo_linux_gnu_x86_64.${{ matrix.archive_ext }} $BINARY_NAME
+          else
+            zip ToDo_windows_x86_64.${{ matrix.archive_ext }} $BINARY_NAME
+          fi
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ToDo-${{ matrix.target }}.${{ matrix.archive_ext }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          discussion_category_name: ""
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
