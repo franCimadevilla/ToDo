@@ -14,12 +14,12 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: _linux_gnu_x86_64
             binary_ext: ''
             archive_ext: tar.gz
             content_type: application/gzip
           - os: windows-latest
-            target: x86_64-pc-windows-msvc
+            target: _windows_x86_64
             binary_ext: .exe
             archive_ext: zip
             content_type: application/zip
@@ -47,7 +47,7 @@ jobs:
           BINARY_NAME=ToDo${{ matrix.binary_ext }}
           mv target/${{ matrix.target }}/release/ToDo${{ matrix.binary_ext }} .
           if [ "${{ matrix.archive_ext }}" = "tar.gz" ]; then
-            tar -czf ToDo-${{ matrix.target }}.${{ matrix.archive_ext }} $BINARY_NAME
+            tar -czf ToDo_Linux_${{ matrix.target }}.${{ matrix.archive_ext }} $BINARY_NAME
           else
             zip ToDo-${{ matrix.target }}.${{ matrix.archive_ext }} $BINARY_NAME
           fi
