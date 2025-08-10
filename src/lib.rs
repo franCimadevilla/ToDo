@@ -14,6 +14,11 @@ pub mod ui {
     pub mod console_ui {
         pub mod console_displayer;
         pub mod menu_options;
+        pub mod generic_console_displayer;
+    }
+    pub mod cli_argument_parser {
+        pub mod cli_parser;
+        pub mod cli_displayer;
     }
     pub mod displayer_trait;
 }
