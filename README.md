@@ -2,7 +2,7 @@
 
 ![Rust](https://img.shields.io/badge/Rust-1.80+-orange?logo=rust)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-[![codecov](https://codecov.io/gh/francimadevilla/ToDo/branch/main/graph/badge.svg)](https://codecov.io/gh/francimadevilla/ToDo)
+[![codecov](https://codecov.io/gh/francimadevilla/ToDo/graph/badge.svg?token=OO8IJN46YX)](https://codecov.io/gh/francimadevilla/ToDo)
 
 Welcome to the **To-Do List in Rust** project, a console-based mini-project designed to learn and practice the fundamental features of the **Rust** programming language. This project is ideal for beginners who want to explore concepts such as *ownership*, *borrowing*, *structs*, *enums*, *pattern matching*, and more while building a practical and functional application.
 
