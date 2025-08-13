@@ -34,15 +34,18 @@ jobs:
             - name: Install cargo-tarpaulin
               run: cargo install cargo-tarpaulin
 
-            - name: Test with cargo
-              run: cargo test --verbose -- --nocapture
-              
             - name: Run coverage
-              run: cargo tarpaulin --out Xml --output-dir coverage --line --fail-under 80 --include-tests
+              run: cargo tarpaulin --tests --all-features --out Xml --output-dir coverage --line --fail-under 80 --include-tests -- --test-threads=1
 
-            
+            - name: Verify coverage report exists
+              run: |
+                test -f coverage/cobertura.xml
+                head -n 20 coverage/cobertura.xml
+
             - name: Upload coverage reports to Codecov
               uses: codecov/codecov-action@v5
               with:
                 files: coverage/cobertura.xml
                 token: ${{ secrets.CODECOV_TOKEN }}
+                flags: rust
+                fail_ci_if_error: true
