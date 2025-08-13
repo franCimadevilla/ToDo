@@ -110,7 +110,12 @@ impl TodoList {
             .map_err(|e| format!("Failed to deserialize tasks: {}", e))?;
 
         self.tasks = deserialized_tasks;
-        
+        self.next_id = self.tasks
+                            .iter()
+                            .map(|task| task.id.parse::<u32>()
+                            .expect(&format!("Failed to parse task ID: {}", task.id)))
+                            .max()
+                            .unwrap_or(0) + 1;
         Ok(())
     }
 }

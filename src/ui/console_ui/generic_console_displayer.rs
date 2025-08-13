@@ -46,18 +46,28 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
             }
         };
         manager.add_task(description.to_string(), priority);
+        
+        writeln!(self.output, "Task added.")
+            .map_err(|e| format!("Failed to write: {}", e))?;
+        
         Ok(())
     }
 
     fn handle_list_tasks(&mut self, manager: &Manager) -> Result<(), String> {
         writeln!(self.output, "You selected: List Tasks").map_err(|e| format!("Failed to write: {}", e))?;
-        for task in manager.get_tasks() {
-            writeln!(
-                self.output,
-                "ID: {}, Description: {}, Priority: {:?}, Completed: {}",
-                task.id, task.description, task.priority, task.completed
-            )
-            .map_err(|e| format!("Failed to write: {}", e))?;
+
+        if manager.get_tasks().is_empty() { 
+            writeln!(self.output, "No tasks in the list.")
+                .map_err(|e| format!("Failed to write: {}", e))?; 
+        } else {
+            for task in manager.get_tasks() {
+                writeln!(
+                    self.output,
+                    "ID: {}, Description: {}, Priority: {:?}, Completed: {}",
+                    task.id, task.description, task.priority, task.completed
+                )
+                .map_err(|e| format!("Failed to write: {}", e))?;
+            }
         }
         self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
         Ok(())
@@ -107,7 +117,11 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
 
     fn handle_undo(&mut self, manager: &mut Manager) -> Result<(), String> {
         if let Err(e) = manager.undo() {
-            writeln!(self.output, "Undo failed: {}", e).map_err(|e| format!("Failed to write: {}", e))?;
+            writeln!(self.output, "Undo failed: {}", e)
+                .map_err(|e| format!("Failed to write: {}", e))?;
+        } else {
+            writeln!(self.output, "Undo operation successful.")
+                .map_err(|e| format!("Failed to write: {}", e))?;
         }
         self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
         Ok(())
