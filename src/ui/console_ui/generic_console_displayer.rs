@@ -3,6 +3,9 @@ use crate::ui::console_ui::menu_options::MenuOption;
 use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
+use rustyline::history::{DefaultHistory, FileHistory};
+use rustyline::{Editor, Helper};
+use serde::Deserialize;
 
 /// Generic ConsoleDisplayer that implements all logic with customizable I/O.
 pub struct GenericConsoleDisplayer<R: BufRead + Send + Sync, W: Write + Send + Sync> {
@@ -74,14 +77,11 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
     }
 
     fn handle_complete_task(&mut self, manager: &mut Manager) -> Result<(), String> {
-        writeln!(self.output, "You selected: Complete Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "Enter task ID to complete:").map_err(|e| format!("Failed to write: {}", e))?;
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        let mut id_input = String::new();
-        self.input
-            .read_line(&mut id_input)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
-        let id_input = id_input.trim();
+        
+        let id_input = self._helper_ask_id_input(vec![
+            "You selected: Complete Task".into(),
+            "Enter task ID to complete:".into()
+        ])?;
 
         if manager.toggle_task_status(id_input.to_string()) {
             writeln!(self.output, "Task with ID {} marked as completed.", id_input)
@@ -95,24 +95,58 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
     }
 
     fn handle_remove_task(&mut self, manager: &mut Manager) -> Result<(), String> {
-        writeln!(self.output, "You selected: Remove Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "Enter task ID to remove:").map_err(|e| format!("Failed to write: {}", e))?;
+
+        let id_input = self._helper_ask_id_input(vec![
+                "You selected: Remove Task".into(), 
+                "Enter task ID to remove:".into()
+            ])?;
+
+        let message = if manager.remove_task(id_input.clone().into()) {
+            format!("Task with ID {} removed.", id_input)
+        } else {
+            format!("Task with ID {} not found.", id_input)
+        };
+
+        write!(self.output, "{}", message).map_err(|e| format!("Failed to write: {}", e))?;
         self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        let mut id_input = String::new();
+        Ok(())
+    }
+
+    /// Recieves two String messages to ask for the ID of the task and returns the id value
+    fn _helper_ask_str_input(&mut self, messages : Vec<String>) -> Result<String, String> {
+        writeln!(self.output, "{}\n{}", messages[0], messages[1]).map_err(|e| format!("Failed to write: {}", e))?;
+        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
+        let mut str_input = String::new();
         self.input
             .read_line(&mut id_input)
             .map_err(|e| format!("Failed to read input: {}", e))?;
-        let id_input = id_input.trim();
 
-        if manager.remove_task(id_input.to_string()) {
-            writeln!(self.output, "Task with ID {} removed.", id_input)
-                .map_err(|e| format!("Failed to write: {}", e))?;
+        Ok(str_input.trim().into())
+    }
+    
+    fn handle_edit_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+        let id_input = self._helper_ask_id_input(vec![
+            "You selected: Edit Task".into(),
+            "Enter task ID to edit".into()
+        ])?;
+
+        let mut rl = Editor::<(), DefaultHistory>::new().expect("RuntimeError: Failed to initiate the line editor");
+
+        if let Some(task) = manager.get_task(id_input.as_ref()) {
+            let new_description = rl.readline_with_initial("Edit description: ", (task.description.as_ref(), ""))
+              .map_err(|e| format!("Failed in the line editor: {}", e));
+
+            let new_priority = rl.readline_with_initial("Edit priority: ", (task.priority.to_string().as_ref(), ""))
+              .map_err(|e| format!("Failed in the line editor: {}", e));
+            
+
+
+            Ok(())
         } else {
-            writeln!(self.output, "Task with ID {} not found.", id_input)
-                .map_err(|e| format!("Failed to write: {}", e))?;
+            write!(self.output, "No task found for ID: {}", id_input).map_err(|e| format!("Failed to write: {}", e));
+            
+            Ok(()) // TODO: check this
         }
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        Ok(())
     }
 
     fn handle_undo(&mut self, manager: &mut Manager) -> Result<(), String> {
