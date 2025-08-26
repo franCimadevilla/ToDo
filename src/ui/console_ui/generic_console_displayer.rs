@@ -4,8 +4,7 @@ use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
 use rustyline::history::{DefaultHistory, FileHistory};
-use rustyline::{Editor, Helper};
-use serde::Deserialize;
+use rustyline::{Editor};
 
 /// Generic ConsoleDisplayer that implements all logic with customizable I/O.
 pub struct GenericConsoleDisplayer<R: BufRead + Send + Sync, W: Write + Send + Sync> {
@@ -19,40 +18,40 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
     }
 
     fn handle_add_task(&mut self, manager: &mut Manager) -> Result<(), String> {
-        writeln!(self.output, "You selected: Add Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "Enter task description:").map_err(|e| format!("Failed to write: {}", e))?;
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        let mut description = String::new();
-        self.input
-            .read_line(&mut description)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
-        let description = description.trim();
 
-        writeln!(
-            self.output,
-            "Enter task priority number (1-High, 2-Medium, 3-Low):"
-        )
-        .map_err(|e| format!("Failed to write: {}", e))?;
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        let mut priority_input = String::new();
-        self.input
-            .read_line(&mut priority_input)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
-        let priority = match priority_input.trim() {
-            "1" => Priority::High,
-            "2" => Priority::Medium,
-            "3" => Priority::Low,
-            _ => {
-                writeln!(self.output, "Invalid priority, defaulting to Low.")
+        writeln!(self.output, "You selected: Add Task")
+            .map_err(|e| format!("Failed to write: {}", e))?;
+
+        
+        let description = loop {
+            let input = self._helper_ask_str_input(vec![
+                "Enter task description:".into()
+            ])?;
+
+            if input.is_empty() {
+                writeln!(self.output, "Task description cannot be empty")
                     .map_err(|e| format!("Failed to write: {}", e))?;
-                Priority::Low
+            } else {
+                break input;
             }
         };
-        manager.add_task(description.to_string(), priority);
+
         
-        writeln!(self.output, "Task added.")
-            .map_err(|e| format!("Failed to write: {}", e))?;
-        
+        loop {
+            let priority_input = self._helper_ask_str_input(vec![
+                "Enter task priority number (1-High, 2-Medium, 3-Low):".into()
+            ])?;
+            
+            if let Ok(priority) = Priority::str_to_priority(&priority_input) {
+                manager.add_task(description.to_string(), priority);
+                writeln!(self.output, "Task added.")
+                    .map_err(|e| format!("Failed to write: {}", e))?;
+                break;
+            } else {
+                writeln!(self.output, "Invalid priority, please type again a valid one.")
+                    .map_err(|e| format!("Failed to write: {}", e))?;
+            } 
+        }
         Ok(())
     }
 
@@ -78,7 +77,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
 
     fn handle_complete_task(&mut self, manager: &mut Manager) -> Result<(), String> {
         
-        let id_input = self._helper_ask_id_input(vec![
+        let id_input = self._helper_ask_str_input(vec![
             "You selected: Complete Task".into(),
             "Enter task ID to complete:".into()
         ])?;
@@ -96,7 +95,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
 
     fn handle_remove_task(&mut self, manager: &mut Manager) -> Result<(), String> {
 
-        let id_input = self._helper_ask_id_input(vec![
+        let id_input = self._helper_ask_str_input(vec![
                 "You selected: Remove Task".into(), 
                 "Enter task ID to remove:".into()
             ])?;
@@ -111,21 +110,9 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
         Ok(())
     }
-
-    /// Recieves two String messages to ask for the ID of the task and returns the id value
-    fn _helper_ask_str_input(&mut self, messages : Vec<String>) -> Result<String, String> {
-        writeln!(self.output, "{}\n{}", messages[0], messages[1]).map_err(|e| format!("Failed to write: {}", e))?;
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
-        let mut str_input = String::new();
-        self.input
-            .read_line(&mut id_input)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
-
-        Ok(str_input.trim().into())
-    }
-    
+        
     fn handle_edit_task(&mut self, manager: &mut Manager) -> Result<(), String> {
-        let id_input = self._helper_ask_id_input(vec![
+        let id_input = self._helper_ask_str_input(vec![
             "You selected: Edit Task".into(),
             "Enter task ID to edit".into()
         ])?;
@@ -133,13 +120,28 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         let mut rl = Editor::<(), DefaultHistory>::new().expect("RuntimeError: Failed to initiate the line editor");
 
         if let Some(task) = manager.get_task(id_input.as_ref()) {
-            let new_description = rl.readline_with_initial("Edit description: ", (task.description.as_ref(), ""))
-              .map_err(|e| format!("Failed in the line editor: {}", e));
+            let new_description = loop { 
+                let input =  rl.readline_with_initial("Edit description: ", (task.description.as_ref(), ""))
+                    .map_err(|e| format!("Failed in the line editor: {}", e))?;
 
-            let new_priority = rl.readline_with_initial("Edit priority: ", (task.priority.to_string().as_ref(), ""))
-              .map_err(|e| format!("Failed in the line editor: {}", e));
+                if input.is_empty() {
+                    writeln!(self.output, "Task description cannot be empty")
+                    .map_err(|e| format!("Failed to write: {}", e))?;
+                } else {
+                    break input;
+                }
+            };
             
+            let new_priority = loop {
+                let input =  rl.readline_with_initial("Edit priority: ", (task.priority.to_string().as_ref(), ""))
+                    .map_err(|e| format!("Failed in the line editor: {}", e))?;
 
+                if let Ok(priority) = Priority::str_to_priority(input.as_ref()) {
+                    break priority;
+                }
+            };
+
+            manager.edit_task(&id_input, &new_description, &new_priority);
 
             Ok(())
         } else {
@@ -177,6 +179,21 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         writeln!(self.output, "Error: {}", error).map_err(|e| format!("Failed to write: {}", e))?;
         self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
         Ok(())
+    }
+
+    /// Recieves two String messages to ask for the ID of the task and returns the id value
+    fn _helper_ask_str_input(&mut self, messages : Vec<String>) -> Result<String, String> {
+        
+        let prompt = messages.join("\n");
+
+        writeln!(self.output, "{}", prompt).map_err(|e| format!("Failed to write: {}", e))?;
+        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
+        let mut str_input = String::new();
+        self.input
+            .read_line(&mut str_input)
+            .map_err(|e| format!("Failed to read input: {}", e))?;
+
+        Ok(str_input.trim().into())
     }
 }
 

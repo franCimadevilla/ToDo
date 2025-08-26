@@ -44,6 +44,10 @@ impl TodoList {
         &self.tasks
     }
 
+    pub fn get_task_mut(&mut self, id : &str) -> Option<&mut Task> {
+        self.tasks.iter_mut().find(|t| t.id.eq(id))
+    }
+
     /// Mark a task as completed/uncompleted by ID
     pub fn toggle_task_status(&mut self, id: String) {
 

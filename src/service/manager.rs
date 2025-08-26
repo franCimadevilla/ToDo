@@ -17,8 +17,10 @@ pub trait ManagerTrait {
     fn add_task(&mut self, description: String, priority: Priority);
     fn get_tasks(&self) -> &Vec<Task>;
     fn get_task(&self, id: &str) -> Option<&Task>;
+    fn get_task_mut(&mut self, id : &str) -> Option<&mut Task>;
     fn toggle_task_status(&mut self, task_id: String) -> bool;
     fn remove_task(&mut self, task_id: String) -> bool;
+    fn edit_task(&mut self, task_id : &str, new_description : &str, new_priority : &Priority) -> bool;
     fn undo(&mut self) -> Result<bool, String>;
     fn redo(&mut self) -> Result<bool, String>;
 }
@@ -73,6 +75,11 @@ impl ManagerTrait for Manager {
         self.todo_list.get_tasks().iter().find(|task| task.id == id)
     }
 
+    /// Get a mutable reference to a Task by its ID
+    fn get_task_mut(&mut self, id : &str) -> Option<&mut Task> {
+        self.todo_list.get_task_mut(id)
+    }
+   
     /// Complete/Uncomplete a task by ID
     /// Returns true if the task was found and toggled, false otherwise.
     fn toggle_task_status(&mut self, task_id: String) -> bool {
