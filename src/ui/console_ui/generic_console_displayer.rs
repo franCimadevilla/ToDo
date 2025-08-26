@@ -3,7 +3,7 @@ use crate::ui::console_ui::menu_options::MenuOption;
 use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
-use rustyline::history::{DefaultHistory, FileHistory};
+use rustyline::history::{DefaultHistory};
 use rustyline::{Editor};
 
 /// Generic ConsoleDisplayer that implements all logic with customizable I/O.
@@ -43,7 +43,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
             ])?;
             
             if let Ok(priority) = Priority::str_to_priority(&priority_input) {
-                manager.add_task(description.to_string(), priority);
+                manager.add_task(description.as_ref(), &priority);
                 writeln!(self.output, "Task added.")
                     .map_err(|e| format!("Failed to write: {}", e))?;
                 break;
@@ -75,14 +75,14 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
 
-    fn handle_complete_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+    fn handle_toggle_task(&mut self, manager: &mut Manager) -> Result<(), String> {
         
         let id_input = self._helper_ask_str_input(vec![
             "You selected: Complete Task".into(),
             "Enter task ID to complete:".into()
         ])?;
 
-        if manager.toggle_task_status(id_input.to_string()) {
+        if manager.toggle_task_status(id_input.as_ref()) {
             writeln!(self.output, "Task with ID {} marked as completed.", id_input)
                 .map_err(|e| format!("Failed to write: {}", e))?;
         } else {
@@ -100,7 +100,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
                 "Enter task ID to remove:".into()
             ])?;
 
-        let message = if manager.remove_task(id_input.clone().into()) {
+        let message = if manager.remove_task(id_input.as_ref()) {
             format!("Task with ID {} removed.", id_input)
         } else {
             format!("Task with ID {} not found.", id_input)
@@ -143,12 +143,11 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
 
             manager.edit_task(&id_input, &new_description, &new_priority);
 
-            Ok(())
         } else {
-            write!(self.output, "No task found for ID: {}", id_input).map_err(|e| format!("Failed to write: {}", e));
-            
-            Ok(()) // TODO: check this
+            write!(self.output, "Task with ID: {} not found", id_input)
+                .map_err(|e| format!("Failed to write: {}", e))?;
         }
+        Ok(()) 
     }
 
     fn handle_undo(&mut self, manager: &mut Manager) -> Result<(), String> {
@@ -213,10 +212,13 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> Displayer for GenericCons
                     let _ = self.handle_list_tasks(manager);
                 }
                 Ok(MenuOption::CompleteTask) => {
-                    let _ = self.handle_complete_task(manager);
+                    let _ = self.handle_toggle_task(manager);
                 }
                 Ok(MenuOption::RemoveTask) => {
                     let _ = self.handle_remove_task(manager);
+                },
+                Ok(MenuOption::EditTask) => {
+                    let _ = self.handle_edit_task(manager);
                 }
                 Ok(MenuOption::Exit) => {
                     let _ = self.exit();
@@ -287,8 +289,8 @@ mod tests {
     fn create_manager_with_tasks() -> Manager {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer);
         let mut manager = Manager::new(displayer);
-        manager.add_task("Test Task 1".to_string(), Priority::High);
-        manager.add_task("Test Task 2".to_string(), Priority::Medium);
+        manager.add_task("Test Task 1".as_ref(), &Priority::High);
+        manager.add_task("Test Task 2".as_ref(), &Priority::Medium);
         manager
     }
 
@@ -392,12 +394,12 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_complete_task_success() {
+    fn test_handle_toggle_task_success() {
         let input = Cursor::new("1\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
-        displayer.handle_complete_task(&mut manager).expect("Complete task failed");
+        displayer.handle_toggle_task(&mut manager).expect("Complete task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("You selected: Complete Task"));
         assert!(output.contains("Task with ID 1 marked as completed"));
@@ -406,12 +408,12 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_complete_task_not_found() {
+    fn test_handle_toggle_task_not_found() {
         let input = Cursor::new("999\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
-        displayer.handle_complete_task(&mut manager).expect("Complete task failed");
+        displayer.handle_toggle_task(&mut manager).expect("Complete task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("Task with ID 999 not found"));
     }
@@ -447,7 +449,7 @@ mod tests {
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
-        manager.remove_task("1".to_string());
+        manager.remove_task("1".as_ref());
         displayer.handle_undo(&mut manager).expect("Undo failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         let tasks = manager.get_tasks();
@@ -462,7 +464,7 @@ mod tests {
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
         let id_to_remove = manager.get_tasks()[0].id.clone();
-        manager.remove_task(id_to_remove);
+        manager.remove_task(id_to_remove.as_ref());
         manager.undo().expect("Undo failed");
         displayer.handle_redo(&mut manager).expect("Redo failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();

@@ -43,7 +43,7 @@ impl Cli {
     pub fn evaluate_command(&self, command : CliCommand, manager: &mut Manager, displayer : &mut dyn Displayer ) {
         match command {
             CliCommand::Add { description, priority } => {
-                manager.add_task(description.to_string(), priority);
+                manager.add_task(description.as_ref(), &priority);
                 displayer.notify("Task added successfully.")
                     .expect("Failed to notify addition of a task.");
             },
@@ -92,7 +92,7 @@ impl Cli {
                         .expect("Failed to notify error for task removal");
                     return;
                 } else {
-                    manager.remove_task(id.to_string());
+                    manager.remove_task(id.as_ref());
                     displayer.notify("Task removed successfully.")
                         .expect("Failed to notify removal of a task.");
                 }
@@ -103,7 +103,7 @@ impl Cli {
                         .expect("Failed to notify error for toggling task status");
                     return;
                 } else {
-                    manager.toggle_task_status(id.to_string());
+                    manager.toggle_task_status(id.as_ref());
                     displayer.notify("Task status toggled successfully.")
                         .expect("Failed to notify toggling of task status.");
                 }
@@ -282,8 +282,8 @@ mod tests {
     #[test]
     fn test_evaluate_list_command_with_tasks() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
-        manager.add_task("Task 2".to_string(), Priority::High);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
+        manager.add_task("Task 2".as_ref(), &Priority::High);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::List {
@@ -306,8 +306,8 @@ mod tests {
     #[test]
     fn test_evaluate_list_command_filtered_priority() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
-        manager.add_task("Task 2".to_string(), Priority::High);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
+        manager.add_task("Task 2".as_ref(), &Priority::High);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::List {
@@ -329,9 +329,9 @@ mod tests {
     #[test]
     fn test_evaluate_list_command_filtered_completed() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
-        manager.toggle_task_status("1".to_string());
-        manager.add_task("Task 2".to_string(), Priority::High);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
+        manager.toggle_task_status("1".as_ref());
+        manager.add_task("Task 2".as_ref(), &Priority::High);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::List {
@@ -353,9 +353,9 @@ mod tests {
     #[test]
     fn test_evaluate_list_command_filtered_both() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
-        manager.toggle_task_status("1".to_string());
-        manager.add_task("Task 2".to_string(), Priority::Low);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
+        manager.toggle_task_status("1".as_ref());
+        manager.add_task("Task 2".as_ref(), &Priority::Low);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::List {
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn test_evaluate_toggle_status_success() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::ToggleStatus { id: "1".to_string() }),
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn test_evaluate_remove_success() {
         let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".to_string(), Priority::Low);
+        manager.add_task("Task 1".as_ref(), &Priority::Low);
         let mut displayer = MockDisplayer::new();
         let cli = Cli {
             command: Some(CliCommand::Remove { id: "1".to_string() }),

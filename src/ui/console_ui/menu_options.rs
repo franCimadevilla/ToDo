@@ -4,6 +4,7 @@ pub enum MenuOption {
     ListTasks,
     CompleteTask,
     RemoveTask,
+    EditTask,
     Exit,
     Undo,
     Redo,

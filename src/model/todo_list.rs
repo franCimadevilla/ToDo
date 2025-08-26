@@ -71,6 +71,21 @@ impl TodoList {
         }
     }
 
+    /// Edit a task fields
+    pub fn edit_task(&mut self, id : &str, new_fields : (&str, &Priority) ) {
+        let task = self.get_task_mut(id)
+            .expect( &format!("IllegalState Error: Task not found for ID: {}", id));
+        if !task.description.eq(new_fields.0) { 
+            task.description = new_fields.0.to_string() 
+        } 
+
+        if !task.priority.eq(new_fields.1) {
+            task.priority = *new_fields.1
+        }
+
+        self.save();
+    }
+
     /// Save the todo list into the default JSON file name stored
     pub fn save(&self) {
         self.save_to_file(&self.file_name).expect("Failed to save todo list to the default file");

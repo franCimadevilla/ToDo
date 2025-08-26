@@ -14,12 +14,12 @@ pub struct Manager {
 pub trait ManagerTrait {
     fn new(displayer : Box<dyn Displayer>) -> Self;
     fn run(&mut self);
-    fn add_task(&mut self, description: String, priority: Priority);
+    fn add_task(&mut self, description: &str, priority: &Priority);
     fn get_tasks(&self) -> &Vec<Task>;
     fn get_task(&self, id: &str) -> Option<&Task>;
     fn get_task_mut(&mut self, id : &str) -> Option<&mut Task>;
-    fn toggle_task_status(&mut self, task_id: String) -> bool;
-    fn remove_task(&mut self, task_id: String) -> bool;
+    fn toggle_task_status(&mut self, task_id: &str) -> bool;
+    fn remove_task(&mut self, task_id: &str) -> bool;
     fn edit_task(&mut self, task_id : &str, new_description : &str, new_priority : &Priority) -> bool;
     fn undo(&mut self) -> Result<bool, String>;
     fn redo(&mut self) -> Result<bool, String>;
@@ -54,10 +54,10 @@ impl ManagerTrait for Manager {
 
     /// Adds a new task to the todo list and updates the undo stack.
     /// Clears the redo stack after adding a new task.
-    fn add_task(&mut self, description: String, priority: Priority) {
+    fn add_task(&mut self, description: &str, priority: &Priority) {
         let mut command = Command::AddTask {
-            description,
-            priority,
+            description: description.to_string(),
+            priority: *priority,
         };
         let undo_data = command.execute(self); 
         self.undo_stack.push((command, undo_data));
@@ -82,11 +82,11 @@ impl ManagerTrait for Manager {
    
     /// Complete/Uncomplete a task by ID
     /// Returns true if the task was found and toggled, false otherwise.
-    fn toggle_task_status(&mut self, task_id: String) -> bool {
-        if self.get_tasks().iter().find(|task| task.id == task_id).is_none() {
+    fn toggle_task_status(&mut self, task_id: &str) -> bool {
+        if self.get_task(task_id).is_none() {
             return false;
         } else {
-            let mut command = Command::CompleteTask { id: task_id };
+            let mut command = Command::CompleteTask { id: task_id.into() };
             let undo_data = command.execute( self);
             self.undo_stack.push((command, undo_data));
             self.redo_stack.clear();
@@ -96,13 +96,31 @@ impl ManagerTrait for Manager {
 
     /// Remove a task from the todo list by ID
     /// Returns true if the task was found and removed, false otherwise.
-    fn remove_task(&mut self, task_id: String) -> bool {
-        let task_ = self.get_tasks().iter().find(|t| t.id == task_id);
+    fn remove_task(&mut self, task_id: &str) -> bool {
+        let task_ = self.get_task(task_id);
+
         if task_.is_none() {
             return false;
         } else {
             let mut command = Command::RemoveTask { 
                 task : task_.expect("Error when extracting the task during remove").clone() 
+            };
+            let undo_data = command.execute(self);
+            self.undo_stack.push((command, undo_data));
+            self.redo_stack.clear();
+            return true;
+        }
+    }
+
+    fn edit_task(&mut self, task_id: &str, new_description : &str, new_priority : &Priority) -> bool{
+        let task  = self.get_task_mut(task_id);
+
+        if task.is_none() {
+            return false;
+        } else {
+            let mut command = Command::EditTask { 
+                id: task_id.into(),
+                new_fields : (new_description.into(), *new_priority)
             };
             let undo_data = command.execute(self);
             self.undo_stack.push((command, undo_data));
@@ -132,6 +150,12 @@ impl ManagerTrait for Manager {
                 UndoRedoData::RemoveTask { task } => {
                     self.todo_list.push_task(task.clone());
                 },
+                UndoRedoData::EditTask { previous_task} => {
+                    self.todo_list.edit_task(
+                        previous_task.id.as_ref(),
+                         (previous_task.description.as_ref(), &previous_task.priority)
+                        );
+                }
             }
             self.redo_stack.push((command, redo_undo_data_copy));
             Ok(true)
@@ -155,6 +179,12 @@ impl ManagerTrait for Manager {
                 Command::RemoveTask { task } => {
                     self.todo_list.remove_task(task.id.clone());
                 },
+                Command::EditTask { id , new_fields } => {
+                    self.todo_list.edit_task(
+                        id, 
+                        (new_fields.0.as_ref(), &new_fields.1)
+                    );
+                }
             }
             self.undo_stack.push((command, undo_data));
             Ok(true)
@@ -194,7 +224,7 @@ mod tests {
     fn test_add_task() {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
-        manager.add_task("Test task".to_string(), Priority::High);
+        manager.add_task("Test task".as_ref(), &Priority::High);
         assert_eq!(manager.todo_list.tasks.len(), 1);
         assert_eq!(manager.undo_stack.len(), 1);
         assert_eq!(manager.redo_stack.len(), 0);
@@ -207,7 +237,7 @@ mod tests {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
         let id = manager.todo_list.add_task("Test task".to_string(), Priority::Medium);
-        let result = manager.toggle_task_status(id.clone());
+        let result = manager.toggle_task_status(id.as_ref());
         assert!(result);
         assert_eq!(manager.todo_list.tasks[0].completed, true);
         assert_eq!(manager.undo_stack.len(), 1);
@@ -218,7 +248,7 @@ mod tests {
     fn test_complete_task_not_found() {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
-        let result = manager.toggle_task_status("notfound".to_string());
+        let result = manager.toggle_task_status("notfound".as_ref());
         assert!(!result);
         assert_eq!(manager.undo_stack.len(), 0);
     }
@@ -228,7 +258,7 @@ mod tests {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
         let id = manager.todo_list.add_task("Test task".to_string(), Priority::Low);
-        let result = manager.remove_task(id.clone());
+        let result = manager.remove_task(id.as_ref());
         assert!(result);
         assert_eq!(manager.todo_list.tasks.len(), 0);
         assert_eq!(manager.undo_stack.len(), 1);
@@ -239,7 +269,7 @@ mod tests {
     fn test_undo_add_task() {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
-        manager.add_task("Test task".to_string(), Priority::High);
+        manager.add_task("Test task".as_ref(), &Priority::High);
         let result = manager.undo().expect("Undo failed");
         assert!(result);
         assert_eq!(manager.todo_list.tasks.len(), 0);
@@ -251,7 +281,7 @@ mod tests {
     fn test_redo_add_task() {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer::new());
         let mut manager = Manager::new(displayer);
-        manager.add_task("Test task".to_string(), Priority::High);
+        manager.add_task("Test task".as_ref(), &Priority::High);
         manager.undo().expect("Undo failed");
         let result = manager.redo().expect("Redo failed");
         assert!(result);
