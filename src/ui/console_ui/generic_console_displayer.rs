@@ -1,5 +1,5 @@
 use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::menu_options::MenuOption;
+use crate::ui::console_ui::menu_options::{MenuOption, MENU_OPTIONS};
 use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
@@ -17,7 +17,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         GenericConsoleDisplayer { input, output }
     }
 
-    fn handle_add_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_add_task(&mut self, manager: &mut Manager) -> Result<(), String> {
 
         writeln!(self.output, "You selected: Add Task")
             .map_err(|e| format!("Failed to write: {}", e))?;
@@ -55,7 +55,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
 
-    fn handle_list_tasks(&mut self, manager: &Manager) -> Result<(), String> {
+    pub fn handle_list_tasks(&mut self, manager: &Manager) -> Result<(), String> {
         writeln!(self.output, "You selected: List Tasks").map_err(|e| format!("Failed to write: {}", e))?;
 
         if manager.get_tasks().is_empty() { 
@@ -75,7 +75,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
 
-    fn handle_toggle_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_toggle_task(&mut self, manager: &mut Manager) -> Result<(), String> {
         
         let id_input = self._helper_ask_str_input(vec![
             "You selected: Complete Task".into(),
@@ -93,7 +93,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
 
-    fn handle_remove_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_remove_task(&mut self, manager: &mut Manager) -> Result<(), String> {
 
         let id_input = self._helper_ask_str_input(vec![
                 "You selected: Remove Task".into(), 
@@ -111,7 +111,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
         
-    fn handle_edit_task(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_edit_task(&mut self, manager: &mut Manager) -> Result<(), String> {
         let id_input = self._helper_ask_str_input(vec![
             "You selected: Edit Task".into(),
             "Enter task ID to edit".into()
@@ -150,7 +150,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(()) 
     }
 
-    fn handle_undo(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_undo(&mut self, manager: &mut Manager) -> Result<(), String> {
         if let Err(e) = manager.undo() {
             writeln!(self.output, "Undo failed: {}", e)
                 .map_err(|e| format!("Failed to write: {}", e))?;
@@ -162,7 +162,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
         Ok(())
     }
 
-    fn handle_redo(&mut self, manager: &mut Manager) -> Result<(), String> {
+    pub fn handle_redo(&mut self, manager: &mut Manager) -> Result<(), String> {
         match manager.redo() {
             Ok(true) => writeln!(self.output, "Redo operation successful.")
                 .map_err(|e| format!("Failed to write: {}", e))?,
@@ -205,65 +205,33 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> Displayer for GenericCons
         let _ = self.notify("Welcome to the ToDo console application!");
         loop {
             match self.display() {
-                Ok(MenuOption::AddTask) => {
-                    let _ = self.handle_add_task(manager);
-                }
-                Ok(MenuOption::ListTasks) => {
-                    let _ = self.handle_list_tasks(manager);
-                }
-                Ok(MenuOption::CompleteTask) => {
-                    let _ = self.handle_toggle_task(manager);
-                }
-                Ok(MenuOption::RemoveTask) => {
-                    let _ = self.handle_remove_task(manager);
+                Ok(option) => {
+                    if let Ok(continue_) = option.execute(self, manager) {
+                        if !continue_ { 
+                            break;
+                        }
+                    }
                 },
-                Ok(MenuOption::EditTask) => {
-                    let _ = self.handle_edit_task(manager);
-                }
-                Ok(MenuOption::Exit) => {
-                    let _ = self.exit();
-                    break;
-                }
-                Ok(MenuOption::Undo) => {
-                    let _ = self.handle_undo(manager);
-                }
-                Ok(MenuOption::Redo) => {
-                    let _ = self.handle_redo(manager);
-                }
                 Err(e) => {
                     let _ = self.handle_error(&e);
                 }
+
             }
         }
     }
 
     fn display(&mut self) -> Result<MenuOption, String> {
-        writeln!(self.output, "\nToDo Operations:").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "1. Add Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "2. List Tasks").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "3. Complete Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "4. Remove Task").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "5. Exit").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "[U] Undo").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "[R] Redo").map_err(|e| format!("Failed to write: {}", e))?;
-        writeln!(self.output, "Enter your choice (1-5): ").map_err(|e| format!("Failed to write: {}", e))?;
-        self.output.flush().map_err(|e| format!("Failed to flush: {}", e))?;
+        writeln!(self.output, "\n\nToDo Operations:").map_err(|e| format!("Failed to write: {}", e))?;
+       
+       for (text, _, _) in MENU_OPTIONS.iter() {
+            writeln!(self.output, "{}", text).map_err(|e| format!("Failed to write: {}", e))?;
+       }
 
-        let mut input = String::new();
-        self.input
-            .read_line(&mut input)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
+       let input = self._helper_ask_str_input(vec![
+        "Enter your choice (1-5): ".into()
+       ])?;
 
-        match input.trim() {
-            "1" => Ok(MenuOption::AddTask),
-            "2" => Ok(MenuOption::ListTasks),
-            "3" => Ok(MenuOption::CompleteTask),
-            "4" => Ok(MenuOption::RemoveTask),
-            "5" => Ok(MenuOption::Exit),
-            "U" | "u" => Ok(MenuOption::Undo),
-            "R" | "r" => Ok(MenuOption::Redo),
-            _ => Err("Invalid option, please try again.".to_string()),
-        }
+        MenuOption::str_to_menuoption(input.trim())
     }
 
     fn notify(&mut self, message: &str) -> Result<(), String> {
