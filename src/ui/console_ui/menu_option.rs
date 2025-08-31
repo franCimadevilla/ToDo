@@ -16,12 +16,20 @@ pub enum MenuOption {
 
 impl MenuOption {
     pub fn str_to_menuoption(text : &str) -> Result<MenuOption, String> {
-         let input = text.to_lowercase();
+        let input = text.to_lowercase();
         MENU_OPTIONS
             .iter()
             .find(|(_, key, _)| key.eq_ignore_ascii_case(&input))
             .map(|(_, _, option)| *option)
             .ok_or_else(|| "Invalid option, please try again.".to_string())
+    }
+
+    pub fn get_input_key(menuoption : &MenuOption) -> &str {
+        MENU_OPTIONS
+            .iter()
+            .find(|(_, _, option )| option.eq(menuoption))
+            .map(|(_, key, _)| key)
+            .expect("Invalid option")
     }
 
     pub fn execute<R:BufRead + Send + Sync, W: Write + Send + Sync>(
@@ -53,7 +61,7 @@ pub static MENU_OPTIONS: Lazy<Vec<(&'static str, &'static str, MenuOption)>> = L
         ("3. Complete Task", "3", MenuOption::CompleteTask),
         ("4. Remove Task", "4", MenuOption::RemoveTask),
         ("5. Edit Task", "5", MenuOption::EditTask),
-        ("6. Exit", "6", MenuOption::Exit),
+        ("[E] Exit", "e", MenuOption::Exit),
         ("[U] Undo", "u", MenuOption::Undo),
         ("[R] Redo", "r", MenuOption::Redo),
     ]

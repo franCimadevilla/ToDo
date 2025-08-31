@@ -198,7 +198,7 @@ impl ManagerTrait for Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::console_ui::menu_options::MenuOption;
+    use crate::ui::console_ui::menu_option::MenuOption;
 
     // Mock Displayer para pruebas
     struct MockDisplayer;

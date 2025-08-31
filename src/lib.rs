@@ -13,7 +13,7 @@ pub mod service {
 pub mod ui {
     pub mod console_ui {
         pub mod console_displayer;
-        pub mod menu_options;
+        pub mod menu_option;
         pub mod generic_console_displayer;
     }
     pub mod cli_argument_parser {

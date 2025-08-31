@@ -1,4 +1,4 @@
-use crate::ui::console_ui::menu_options::MenuOption;
+use crate::ui::console_ui::menu_option::MenuOption;
 use crate::service::manager::Manager;
 
 pub trait Displayer: Send + Sync {

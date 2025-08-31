@@ -1,5 +1,5 @@
 use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::menu_options::{MenuOption, MENU_OPTIONS};
+use crate::ui::console_ui::menu_option::{MenuOption, MENU_OPTIONS};
 use crate::service::manager::{Manager, ManagerTrait};
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
@@ -142,6 +142,8 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
             };
 
             manager.edit_task(&id_input, &new_description, &new_priority);
+            write!(self.output, "Task with ID: {} was edited", id_input)
+            .map_err(|e| format!("Failed to write: {}", e))?;
 
         } else {
             write!(self.output, "Task with ID: {} not found", id_input)
@@ -337,15 +339,15 @@ mod tests {
 
     #[test]
     fn test_handle_add_task_invalid_priority() {
-        let input = Cursor::new("Test Task\ninvalid\n".to_string());
+        let input = Cursor::new("Test Task\ninvalid\n2\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
         displayer.handle_add_task(&mut manager).expect("Add task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
-        assert!(output.contains("Invalid priority, defaulting to Low"));
+        assert!(output.contains("Invalid priority, please type again a valid one."));
         let tasks = manager.get_tasks();
-        assert!(tasks.iter().any(|t| t.description == "Test Task" && t.priority == Priority::Low));
+        assert!(tasks.iter().any(|t| t.description == "Test Task" && t.priority == Priority::Medium));
     }
 
     #[test]
@@ -453,7 +455,7 @@ mod tests {
 
     #[test]
     fn test_run_add_and_exit() {
-        let input = Cursor::new("1\nTest Task\n2\n5\n".to_string());
+        let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
@@ -468,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_run_invalid_input() {
-        let input = Cursor::new("invalid\n5\n".to_string());
+        let input = Cursor::new("invalid\ne\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
@@ -478,9 +480,10 @@ mod tests {
         assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
 
+    
     #[test]
     fn test_console_displayer_run() {
-        let input = Cursor::new("1\nTest Task\n2\n5\n".to_string());
+        let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
         let output = Cursor::new(Vec::new());
         let mut displayer = GenericConsoleDisplayer::new(input, output);
         let mut manager = create_manager_with_tasks();
@@ -492,4 +495,15 @@ mod tests {
         let tasks = manager.get_tasks();
         assert!(tasks.iter().any(|t| t.description == "Test Task" && t.priority == Priority::Medium));
     }
+
+    #[test]
+    fn test_handle_edit_task_no_change() {
+
+    }
+
+    #[test]
+    fn test_handle_edit_task_change_fields() {
+
+    }
+
 }

@@ -1,6 +1,6 @@
 use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
 use std::io::{BufReader, Stdin, Stdout};
-use crate::ui::console_ui::menu_options::MenuOption;
+use crate::ui::console_ui::menu_option::MenuOption;
 use crate::service::manager::Manager;
 use crate::ui::displayer_trait::Displayer;
 

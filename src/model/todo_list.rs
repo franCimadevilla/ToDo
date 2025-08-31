@@ -236,4 +236,33 @@ mod tests {
         let result = todo_list.load_from_file("todo.json");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_edit_task() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".into(), Priority::High);
+        let new_text = "Edited text".into();
+        let new_priority = Priority::Low;
+        todo_list.edit_task(id.as_ref(), (new_text, &new_priority));
+
+        let edited_task = todo_list.get_task_mut(id.as_ref()).expect("Task not found");
+        assert_eq!(edited_task.description, new_text.to_string())
+    }
+
+    #[test]
+    fn test_get_task_mut_exist() {
+        let mut todo_list = TodoList::new();
+        let id = todo_list.add_task("Test task".into(), Priority::High);
+        
+        let task = todo_list.get_task_mut(id.as_ref());
+        assert!(task.is_some())
+    }
+
+    #[test]
+    fn test_task_mut_not_found() {
+        let mut todo_list = TodoList::new();
+        let id = "2".to_string();
+        let task = todo_list.get_task_mut(id.as_ref());
+        assert!(task.is_none())
+    }
 }
