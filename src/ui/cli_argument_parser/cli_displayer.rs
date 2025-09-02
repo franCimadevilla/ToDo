@@ -1,11 +1,14 @@
-use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
-use std::io::{BufReader, Stdin, Stdout};
-use crate::ui::console_ui::menu_options::MenuOption;
+use rustyline::Editor;
+use rustyline::history::DefaultHistory;
+
 use crate::service::manager::Manager;
-use crate::ui::displayer_trait::Displayer;
+use crate::service::menu_option::MenuOption;
+use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
+use crate::ui::displayer::Displayer;
+use std::io::{BufReader, Stdin, Stdout};
 
 pub struct CliDisplayer {
-    inner : GenericConsoleDisplayer<BufReader<Stdin>, Stdout>,
+    inner: GenericConsoleDisplayer<BufReader<Stdin>, Stdout, Editor<(), DefaultHistory>>,
 }
 
 impl CliDisplayer {
@@ -14,6 +17,7 @@ impl CliDisplayer {
             inner: GenericConsoleDisplayer::new(
                 BufReader::new(std::io::stdin()),
                 std::io::stdout(),
+                Editor::<(), DefaultHistory>::new().expect("Failed to create editor"),
             ),
         }
     }
@@ -24,11 +28,19 @@ impl Displayer for CliDisplayer {
         CliDisplayer::new()
     }
 
-    fn run(&mut self, _manager: &mut Manager) { () }
+    fn run(&mut self, _manager: &mut Manager) {
+        ()
+    }
 
-    fn display(&mut self) -> Result<MenuOption, String> { Ok(MenuOption::Exit) }
+    fn display(&mut self) -> Result<MenuOption, String> {
+        Ok(MenuOption::Exit)
+    }
 
-    fn notify(&mut self, message: &str) -> Result<(), String> { self.inner.notify(message) }
+    fn notify(&mut self, message: &str) -> Result<(), String> {
+        self.inner.notify(message)
+    }
 
-    fn exit(&mut self) -> Result<(), String> { self.inner.exit() }
+    fn exit(&mut self) -> Result<(), String> {
+        self.inner.exit()
+    }
 }

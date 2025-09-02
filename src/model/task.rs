@@ -1,5 +1,5 @@
 use crate::model::priority::Priority;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Task {

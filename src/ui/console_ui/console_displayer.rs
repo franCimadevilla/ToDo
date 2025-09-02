@@ -1,12 +1,15 @@
-use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::menu_options::MenuOption;
-use crate::service::manager::{Manager};
-use std::io::{BufReader, Stdin, Stdout};
+use rustyline::Editor;
+use rustyline::history::DefaultHistory;
+
+use crate::service::manager::Manager;
+use crate::service::menu_option::MenuOption;
 use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
+use crate::ui::displayer::Displayer;
+use std::io::{BufReader, Stdin, Stdout};
 
 /// ConsoleDisplayer for production, wrapping GenericConsoleDisplayer with Stdin/Stdout.
 pub struct ConsoleDisplayer {
-    inner: GenericConsoleDisplayer<BufReader<Stdin>, Stdout>,
+    inner: GenericConsoleDisplayer<BufReader<Stdin>, Stdout, Editor<(), DefaultHistory>>,
 }
 
 impl ConsoleDisplayer {
@@ -15,6 +18,7 @@ impl ConsoleDisplayer {
             inner: GenericConsoleDisplayer::new(
                 BufReader::new(std::io::stdin()),
                 std::io::stdout(),
+                Editor::<(), DefaultHistory>::new().expect("Failed when creating editor"),
             ),
         }
     }
@@ -35,11 +39,9 @@ impl Displayer for ConsoleDisplayer {
 
     fn notify(&mut self, message: &str) -> Result<(), String> {
         return self.inner.notify(message);
-    
     }
 
     fn exit(&mut self) -> Result<(), String> {
         return self.inner.exit();
     }
-
 }
