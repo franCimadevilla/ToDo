@@ -1,5 +1,11 @@
+use crate::{
+    service::manager::Manager,
+    ui::{
+        console_ui::generic_console_displayer::GenericConsoleDisplayer, displayer::Displayer,
+        line_editor::LineEditor,
+    },
+};
 use once_cell::sync::Lazy;
-use crate::{service::{line_editor::LineEditor, manager::Manager}, ui::{console_ui::generic_console_displayer::GenericConsoleDisplayer, displayer_trait::Displayer}};
 use std::io::{BufRead, Write};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -15,7 +21,7 @@ pub enum MenuOption {
 }
 
 impl MenuOption {
-    pub fn str_to_menuoption(text : &str) -> Result<MenuOption, String> {
+    pub fn str_to_menuoption(text: &str) -> Result<MenuOption, String> {
         let input = text.to_lowercase();
         MENU_OPTIONS
             .iter()
@@ -24,20 +30,24 @@ impl MenuOption {
             .ok_or_else(|| format!("The option: {} is invalid, please try again.", text))
     }
 
-    pub fn get_input_key(menuoption : &MenuOption) -> &str {
+    pub fn get_input_key(menuoption: &MenuOption) -> &str {
         MENU_OPTIONS
             .iter()
-            .find(|(_, _, option )| option.eq(menuoption))
+            .find(|(_, _, option)| option.eq(menuoption))
             .map(|(_, key, _)| key)
             .expect("Invalid option")
     }
 
-    pub fn execute<R:BufRead + Send + Sync, W: Write + Send + Sync, E: LineEditor + Send + Sync>(
+    pub fn execute<
+        R: BufRead + Send + Sync,
+        W: Write + Send + Sync,
+        E: LineEditor + Send + Sync,
+    >(
         &self,
-        displayer : &mut GenericConsoleDisplayer<R, W, E>,
-        manager : &mut Manager
+        displayer: &mut GenericConsoleDisplayer<R, W, E>,
+        manager: &mut Manager,
     ) -> Result<bool, String> {
-         match self {
+        match self {
             MenuOption::AddTask => displayer.handle_add_task(manager),
             MenuOption::ListTasks => displayer.handle_list_tasks(manager),
             MenuOption::CompleteTask => displayer.handle_toggle_task(manager),

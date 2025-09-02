@@ -1,22 +1,22 @@
-use serde::{Serialize, Deserialize};
 use clap::ValueEnum;
-use std::{fmt::{Display, Formatter, Result}};
+use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub enum Priority {
     Low,
     Medium,
-    High
+    High,
 }
 
 impl Priority {
-    pub fn str_to_priority(text : &str) -> core::result::Result<Self, String> {
+    pub fn str_to_priority(text: &str) -> core::result::Result<Self, String> {
         match text.to_lowercase().as_str() {
-            "1"|"high" => Ok(Priority::High),
-            "2"|"medium" => Ok(Priority::Medium),
-            "3"|"low" => Ok(Priority::Low),
-            other => Err(format!("Invalid prority value: {}", other))
-        } 
+            "1" | "high" => Ok(Priority::High),
+            "2" | "medium" => Ok(Priority::Medium),
+            "3" | "low" => Ok(Priority::Low),
+            other => Err(format!("Invalid prority value: {}", other)),
+        }
     }
 }
 
@@ -36,12 +36,11 @@ impl ValueEnum for Priority {
 }
 
 impl Display for Priority {
-
-    fn fmt(&self, f : &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let text = match self {
             Priority::Low => "Low",
             Priority::Medium => "Medium",
-            Priority::High => "High"
+            Priority::High => "High",
         };
         write!(f, "{}", text)
     }
