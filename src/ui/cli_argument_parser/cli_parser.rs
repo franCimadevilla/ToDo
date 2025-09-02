@@ -116,7 +116,7 @@ impl Cli {
 mod tests {
 
     use super::*;
-    use crate::{model::priority::Priority, ui::console_ui::menu_option::MenuOption};
+    use crate::{model::priority::Priority, service::menu_option::MenuOption};
     
     #[test]
     fn test_parse_add_command() {

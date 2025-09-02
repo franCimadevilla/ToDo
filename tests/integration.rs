@@ -4,7 +4,7 @@ use std::env;
 use std::io::{self, Write};
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
-use to_do::ui::console_ui::menu_option::{MenuOption};
+use to_do::service::menu_option::{MenuOption};
 
 /// Helper function to run the application in a temporary directory with given input and capture output.
 /// This ensures the test case isolation by using a new todo_list.json for each test.

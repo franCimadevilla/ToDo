@@ -1,12 +1,15 @@
+use rustyline::history::DefaultHistory;
+use rustyline::Editor;
+
 use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::menu_option::MenuOption;
+use crate::service::menu_option::MenuOption;
 use crate::service::manager::{Manager};
 use std::io::{BufReader, Stdin, Stdout};
 use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
 
 /// ConsoleDisplayer for production, wrapping GenericConsoleDisplayer with Stdin/Stdout.
 pub struct ConsoleDisplayer {
-    inner: GenericConsoleDisplayer<BufReader<Stdin>, Stdout>,
+    inner: GenericConsoleDisplayer<BufReader<Stdin>, Stdout, Editor<(), DefaultHistory>>,
 }
 
 impl ConsoleDisplayer {
@@ -15,6 +18,7 @@ impl ConsoleDisplayer {
             inner: GenericConsoleDisplayer::new(
                 BufReader::new(std::io::stdin()),
                 std::io::stdout(),
+                Editor::<(), DefaultHistory>::new().expect("Failed when creating editor")
             ),
         }
     }

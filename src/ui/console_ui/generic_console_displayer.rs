@@ -1,20 +1,21 @@
 use crate::ui::displayer_trait::Displayer;
-use crate::ui::console_ui::menu_option::{MenuOption, MENU_OPTIONS};
+use crate::service::menu_option::{MenuOption, MENU_OPTIONS};
 use crate::service::manager::{Manager, ManagerTrait};
+use crate::service::line_editor::LineEditor;
 use crate::model::priority::Priority;
 use std::io::{BufRead, Write};
-use rustyline::history::{DefaultHistory};
-use rustyline::{Editor};
+
 
 /// Generic ConsoleDisplayer that implements all logic with customizable I/O.
-pub struct GenericConsoleDisplayer<R: BufRead + Send + Sync, W: Write + Send + Sync> {
+pub struct GenericConsoleDisplayer<R: BufRead + Send + Sync, W: Write + Send + Sync, E: LineEditor + Send + Sync> {
     input: R,
     output: W,
+    editor: E
 }
 
-impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R, W> {
-    pub fn new(input: R, output: W) -> Self {
-        GenericConsoleDisplayer { input, output }
+impl<R: BufRead + Send + Sync, W: Write + Send + Sync, E: LineEditor + Send + Sync> GenericConsoleDisplayer<R, W, E> {
+    pub fn new(input: R, output: W, editor : E) -> Self {
+        GenericConsoleDisplayer { input, output, editor}
     }
 
     pub fn handle_add_task(&mut self, manager: &mut Manager) -> Result<(), String> {
@@ -117,12 +118,11 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
             "Enter task ID to edit".into()
         ])?;
 
-        let mut rl = Editor::<(), DefaultHistory>::new().expect("RuntimeError: Failed to initiate the line editor");
-
         if let Some(task) = manager.get_task(id_input.as_ref()) {
             let new_description = loop { 
-                let input =  rl.readline_with_initial("Edit description: ", (task.description.as_ref(), ""))
-                    .map_err(|e| format!("Failed in the line editor: {}", e))?;
+                let input =  self.editor
+                        .readline_with_initial("Edit description: ", (task.description.as_ref(), ""))
+                        .map_err(|e| format!("Failed in the line editor: {}", e))?;
 
                 if input.is_empty() {
                     writeln!(self.output, "Task description cannot be empty")
@@ -133,17 +133,19 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
             };
             
             let new_priority = loop {
-                let input =  rl.readline_with_initial("Edit priority: ", (task.priority.to_string().as_ref(), ""))
-                    .map_err(|e| format!("Failed in the line editor: {}", e))?;
+                let input =  self.editor
+                        .readline_with_initial("Edit priority: ", (task.priority.to_string().as_ref(), ""))
+                        .map_err(|e| format!("Failed in the line editor: {}", e))?;
 
                 if let Ok(priority) = Priority::str_to_priority(input.as_ref()) {
                     break priority;
                 }
             };
 
-            manager.edit_task(&id_input, &new_description, &new_priority);
-            write!(self.output, "Task with ID: {} was edited", id_input)
-            .map_err(|e| format!("Failed to write: {}", e))?;
+            if manager.edit_task(&id_input, &new_description, &new_priority) {
+                write!(self.output, "Task with ID: {} was edited", id_input)
+                .map_err(|e| format!("Failed to write: {}", e))?;
+            }
 
         } else {
             write!(self.output, "Task with ID: {} not found", id_input)
@@ -198,7 +200,7 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> GenericConsoleDisplayer<R
     }
 }
 
-impl<R: BufRead + Send + Sync, W: Write + Send + Sync> Displayer for GenericConsoleDisplayer<R, W> {
+impl<R: BufRead + Send + Sync, W: Write + Send + Sync, E: LineEditor + Send + Sync> Displayer for GenericConsoleDisplayer<R, W, E> {
     fn new() -> Self {
         panic!("Use GenericConsoleDisplayer::new(input, output) for testing");
     }
@@ -255,6 +257,8 @@ impl<R: BufRead + Send + Sync, W: Write + Send + Sync> Displayer for GenericCons
 mod tests {
     use super::*;
     use std::io::Cursor;
+    use crate::service::line_editor::MockLineEditor;
+    use crate::ui::displayer_trait::MockDisplayer;
 
     fn create_manager_with_tasks() -> Manager {
         let displayer: Box<dyn Displayer> = Box::new(MockDisplayer);
@@ -264,24 +268,18 @@ mod tests {
         manager
     }
 
-    struct MockDisplayer;
-    impl Displayer for MockDisplayer {
-        fn new() -> Self {
-            MockDisplayer
-        }
-        fn run(&mut self, _manager: &mut Manager) {}
-        fn display(&mut self) -> Result<MenuOption, String> {
-            Ok(MenuOption::Exit)
-        }
-        fn notify(&mut self, _message: &str) -> Result<(), String> { Ok(())}
-        fn exit(&mut self) -> Result<(), String> { Ok(())}
+    fn create_displayer_mocked_editor ( input : Cursor<String>, output : Cursor<Vec<u8>>, editor_vec : Vec<String>) 
+        -> GenericConsoleDisplayer<Cursor<String>, Cursor<Vec<u8>>, MockLineEditor> 
+    {
+        let editor = MockLineEditor::new(editor_vec);
+        GenericConsoleDisplayer::new(input, output, editor)
     }
 
     #[test]
     fn test_notify() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         displayer.notify("Test message").expect("Notify failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert_eq!(output, "[Test message]\n");
@@ -291,7 +289,7 @@ mod tests {
     fn test_exit() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         displayer.exit().expect("Exit failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert_eq!(output, "Exiting ToDo application... Goodbye!\n");
@@ -301,7 +299,7 @@ mod tests {
     fn test_display_add_task() {
         let input = Cursor::new("1\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let result = displayer.display().expect("Display failed");
         assert_eq!(result, MenuOption::AddTask);
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -314,7 +312,7 @@ mod tests {
     fn test_display_invalid_option() {
         let input = Cursor::new("invalid\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let result = displayer.display();
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Invalid option, please try again.");
@@ -326,7 +324,7 @@ mod tests {
     fn test_handle_add_task() {
         let input = Cursor::new("Test Task\n2\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_add_task(&mut manager).expect("Add task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -341,7 +339,7 @@ mod tests {
     fn test_handle_add_task_invalid_priority() {
         let input = Cursor::new("Test Task\ninvalid\n2\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_add_task(&mut manager).expect("Add task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -354,7 +352,7 @@ mod tests {
     fn test_handle_list_tasks() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let manager = create_manager_with_tasks();
         displayer.handle_list_tasks(&manager).expect("List tasks failed");
         let output = String::from_utf8(displayer.output.into_inner()).expect("Failed to convert output to string");
@@ -367,7 +365,7 @@ mod tests {
     fn test_handle_toggle_task_success() {
         let input = Cursor::new("1\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_toggle_task(&mut manager).expect("Complete task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -381,7 +379,7 @@ mod tests {
     fn test_handle_toggle_task_not_found() {
         let input = Cursor::new("999\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_toggle_task(&mut manager).expect("Complete task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -392,7 +390,7 @@ mod tests {
     fn test_handle_remove_task_success() {
         let input = Cursor::new("1\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_remove_task(&mut manager).expect("Remove task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -406,7 +404,7 @@ mod tests {
     fn test_handle_remove_task_not_found() {
         let input = Cursor::new("999\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.handle_remove_task(&mut manager).expect("Remove task failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -417,7 +415,7 @@ mod tests {
     fn test_handle_undo() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         manager.remove_task("1".as_ref());
         displayer.handle_undo(&mut manager).expect("Undo failed");
@@ -431,7 +429,7 @@ mod tests {
     fn test_handle_redo() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         let id_to_remove = manager.get_tasks()[0].id.clone();
         manager.remove_task(id_to_remove.as_ref());
@@ -447,7 +445,7 @@ mod tests {
     fn test_handle_error() {
         let input = Cursor::new("".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         displayer.handle_error("Test error").expect("Handle error failed");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("Error: Test error"));
@@ -457,7 +455,7 @@ mod tests {
     fn test_run_add_and_exit() {
         let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.run(&mut manager);
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -472,7 +470,7 @@ mod tests {
     fn test_run_invalid_input() {
         let input = Cursor::new("invalid\ne\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.run(&mut manager);
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -485,7 +483,7 @@ mod tests {
     fn test_console_displayer_run() {
         let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
         let output = Cursor::new(Vec::new());
-        let mut displayer = GenericConsoleDisplayer::new(input, output);
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
         displayer.run(&mut manager);
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
@@ -498,12 +496,58 @@ mod tests {
 
     #[test]
     fn test_handle_edit_task_no_change() {
-
+        let input_vec = vec![   // List, Edit task, new description, new priority, List, Exit
+            MenuOption::get_input_key(&MenuOption::AddTask).to_string(),
+            "Test Description".into(),
+            "3".into(),
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
+             "Test Description".into(),
+            "3".into(),
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let input = input_vec.join("\n");
+        let input = Cursor::new(input);
+        let output = Cursor::new(Vec::new());
+        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
+        let mut manager = create_manager_with_tasks();
+        displayer.run(&mut manager);
+        let output = String::from_utf8(displayer.output.into_inner()).unwrap();
+        assert!(output.contains("Welcome to the ToDo console application!"));
+        assert!(output.contains("You selected: Add Task"));
+        assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
 
     #[test]
     fn test_handle_edit_task_change_fields() {
+        let input_vec = vec![   // List, Edit task, id, new description, new priority, List, Exit
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
+            "1".into(), //ID
+            "New Description".into(),
+            "1".into(),
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
 
+        assert_eq!(input, "2\n5\n1\nNew Description\n1\n2\ne\n");
+      
+        let input = Cursor::new(input);
+        let output = Cursor::new(Vec::new());
+        let editor = MockLineEditor::new(vec!["New Description".into(), "1".into()]);
+        let mut displayer = GenericConsoleDisplayer::new(input, output, editor);
+        let mut manager = create_manager_with_tasks();
+        displayer.run(&mut manager);
+        let output = String::from_utf8(displayer.output.into_inner()).unwrap();
+
+        assert!(output.contains("Welcome to the ToDo console application!"));
+        assert!(output.contains("Description: Test Task 1, Priority: High, Completed: false"));
+        assert!(output.contains("You selected: Edit Task"));
+        assert!(output.contains("Description: New Description, Priority: High, Completed: false"));
+        assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
 
 }

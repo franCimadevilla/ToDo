@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use crate::{service::manager::Manager, ui::{console_ui::generic_console_displayer::GenericConsoleDisplayer, displayer_trait::Displayer}};
+use crate::{service::{line_editor::LineEditor, manager::Manager}, ui::{console_ui::generic_console_displayer::GenericConsoleDisplayer, displayer_trait::Displayer}};
 use std::io::{BufRead, Write};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -21,7 +21,7 @@ impl MenuOption {
             .iter()
             .find(|(_, key, _)| key.eq_ignore_ascii_case(&input))
             .map(|(_, _, option)| *option)
-            .ok_or_else(|| "Invalid option, please try again.".to_string())
+            .ok_or_else(|| format!("The option: {} is invalid, please try again.", text))
     }
 
     pub fn get_input_key(menuoption : &MenuOption) -> &str {
@@ -32,9 +32,9 @@ impl MenuOption {
             .expect("Invalid option")
     }
 
-    pub fn execute<R:BufRead + Send + Sync, W: Write + Send + Sync>(
+    pub fn execute<R:BufRead + Send + Sync, W: Write + Send + Sync, E: LineEditor + Send + Sync>(
         &self,
-        displayer : &mut GenericConsoleDisplayer<R, W>,
+        displayer : &mut GenericConsoleDisplayer<R, W, E>,
         manager : &mut Manager
     ) -> Result<bool, String> {
          match self {
