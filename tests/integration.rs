@@ -6,7 +6,6 @@ use tempfile::TempDir;
 /// Helper function to run the application in a temporary directory with given input and capture output.
 /// This ensures the test case isolation by using a new todo_list.json for each test.
 fn run_app_with_input(input: &str) -> io::Result<String> {
-    
     let temp_dir = TempDir::new()?;
     let prev_dir = env::current_dir()?;
     env::set_current_dir(&temp_dir)?;
@@ -23,14 +22,13 @@ fn run_app_with_input(input: &str) -> io::Result<String> {
     }
 
     let output = child.wait_with_output()?;
-    
-    
+
     // Restore the original directory
     env::set_current_dir(&prev_dir)?;
-    
+
     let mut full_output = String::from_utf8_lossy(&output.stdout).to_string();
     full_output.push_str(&String::from_utf8_lossy(&output.stderr));
-    
+
     Ok(full_output)
 }
 
@@ -49,7 +47,6 @@ fn test_console_menu_display_and_invalid_input() {
     assert!(output.contains("[U] Undo"));
     assert!(output.contains("[R] Redo"));
 
-
     assert!(output.contains("The option: invalid is invalid, please try again."));
     assert!(output.contains("Exiting ToDo application... Goodbye!"));
 }
@@ -60,7 +57,6 @@ fn test_add_task() {
     let input = "1\nTest Task Description\n2\n2\ne\n"; // Add task, desc, priority Medium (2), list, exit
     let output = run_app_with_input(input).expect("Failed to run app");
 
-
     assert!(output.contains("You selected: Add Task"));
     assert!(output.contains("Enter task description:"));
     assert!(output.contains("Enter task priority number (1-High, 2-Medium, 3-Low):"));
@@ -68,7 +64,11 @@ fn test_add_task() {
     assert!(output.contains("Task added."));
 
     assert!(output.contains("You selected: List Tasks"));
-    assert!(output.contains("ID: 1, Description: Test Task Description, Priority: Medium, Completed: false"));
+    assert!(
+        output.contains(
+            "ID: 1, Description: Test Task Description, Priority: Medium, Completed: false"
+        )
+    );
 }
 
 /// Test adding a task with invalid priority (defaults to Low)
@@ -78,7 +78,9 @@ fn test_add_task_default_priority() {
     let output = run_app_with_input(input).expect("Failed to run app");
 
     assert!(output.contains("Invalid priority, please type again a valid one."));
-    assert!(output.contains("ID: 1, Description: Low Priority Task, Priority: Low, Completed: false"));
+    assert!(
+        output.contains("ID: 1, Description: Low Priority Task, Priority: Low, Completed: false")
+    );
 }
 
 /// Test listing tasks when empty
@@ -110,8 +112,7 @@ fn test_complete_task_success() {
 
     assert!(output.contains("You selected: Complete Task"));
     assert!(output.contains("Enter task ID to complete:"));
-    assert!(output.contains("Task with ID 1 marked as completed.")); 
-
+    assert!(output.contains("Task with ID 1 marked as completed."));
 }
 
 /// Test completing a non-existent task
@@ -131,8 +132,7 @@ fn test_delete_task_success() {
 
     assert!(output.contains("You selected: Remove Task"));
     assert!(output.contains("Enter task ID to remove:"));
-    assert!(output.contains("Task with ID 1 removed.")); 
-
+    assert!(output.contains("Task with ID 1 removed."));
 }
 
 /// Test deleting a non-existent task
@@ -150,7 +150,7 @@ fn test_undo_after_add() {
     let input = "1\nTask to Undo\n1\nU\n2\ne\n"; // Add task, Undo, List (should be empty), Exit
     let output = run_app_with_input(input).expect("Failed to run app");
 
-    assert!(!output.contains("ID:")); 
+    assert!(!output.contains("ID:"));
     assert!(output.contains("Undo operation successful."));
 }
 
