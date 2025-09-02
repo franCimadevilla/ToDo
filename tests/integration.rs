@@ -1,10 +1,7 @@
-/// tests/integration_tests.rs
-
 use std::env;
 use std::io::{self, Write};
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
-use to_do::service::menu_option::{MenuOption};
 
 /// Helper function to run the application in a temporary directory with given input and capture output.
 /// This ensures the test case isolation by using a new todo_list.json for each test.
@@ -53,7 +50,7 @@ fn test_console_menu_display_and_invalid_input() {
     assert!(output.contains("[R] Redo"));
 
 
-    assert!(output.contains("Error: Invalid option, please try again."));
+    assert!(output.contains("The option: invalid is invalid, please try again."));
     assert!(output.contains("Exiting ToDo application... Goodbye!"));
 }
 
@@ -167,35 +164,4 @@ fn test_redo_after_undo() {
     assert!(output.contains("Undo operation successful."));
     assert!(output.contains("Redo operation successful."));
     assert!(output.contains("Description: Task to Redo, Priority: High, Completed: false"));
-}
-
-#[test]
-fn test_edit_task() {
-    let input_vec = vec![   // List, Edit task, new description, new priority, List, Exit
-        MenuOption::get_input_key(&MenuOption::AddTask).to_string(),
-        "Test Description".into(),
-        "3".into(),
-        MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
-        MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
-        "New Description".into(),
-        "1".into(),
-        MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
-        MenuOption::get_input_key(&MenuOption::Exit).to_string(),
-    ];
-    let input = input_vec.join("\n");
-    let output = run_app_with_input(input.as_str()).expect("Failed to run app");
-
-    assert!(output.contains("Description: Task Description, Priority: Low, Completed: false"));
-    assert!(output.contains("was edited"));
-    assert!(output.contains("Description: New Description, Priority: High, Completed: false"));
-}
-
-#[test] 
-fn test_edit_task_no_changes() {
-
-}
-
-#[test]
-fn test_edit_not_found() {
-
 }

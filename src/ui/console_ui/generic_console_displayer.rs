@@ -315,7 +315,7 @@ mod tests {
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let result = displayer.display();
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Invalid option, please try again.");
+        assert_eq!(result.unwrap_err(), "The option: invalid is invalid, please try again.");
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("ToDo Operations:"));
     }
@@ -474,7 +474,7 @@ mod tests {
         let mut manager = create_manager_with_tasks();
         displayer.run(&mut manager);
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
-        assert!(output.contains("Error: Invalid option, please try again."));
+        assert!(output.contains("The option: invalid is invalid, please try again"));
         assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
 
@@ -496,48 +496,22 @@ mod tests {
 
     #[test]
     fn test_handle_edit_task_no_change() {
-        let input_vec = vec![   // List, Edit task, new description, new priority, List, Exit
-            MenuOption::get_input_key(&MenuOption::AddTask).to_string(),
-            "Test Description".into(),
-            "3".into(),
+        let input_vec = vec![  
             MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
             MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
-             "Test Description".into(),
-            "3".into(),
-            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
-            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
-        ];
-        let input = input_vec.join("\n");
-        let input = Cursor::new(input);
-        let output = Cursor::new(Vec::new());
-        let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
-        let mut manager = create_manager_with_tasks();
-        displayer.run(&mut manager);
-        let output = String::from_utf8(displayer.output.into_inner()).unwrap();
-        assert!(output.contains("Welcome to the ToDo console application!"));
-        assert!(output.contains("You selected: Add Task"));
-        assert!(output.contains("Exiting ToDo application... Goodbye!"));
-    }
-
-    #[test]
-    fn test_handle_edit_task_change_fields() {
-        let input_vec = vec![   // List, Edit task, id, new description, new priority, List, Exit
-            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
-            MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
-            "1".into(), //ID
-            "New Description".into(),
-            "1".into(),
+            "1".into(), //ID to edit
             MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
             MenuOption::get_input_key(&MenuOption::Exit).to_string(),
         ];
         let mut input = input_vec.join("\n");
         input.push_str("\n");
-
-        assert_eq!(input, "2\n5\n1\nNew Description\n1\n2\ne\n");
       
         let input = Cursor::new(input);
         let output = Cursor::new(Vec::new());
-        let editor = MockLineEditor::new(vec!["New Description".into(), "1".into()]);
+        let editor = MockLineEditor::new(vec![ //Edited fields inputed for editor
+            "Test Task 1".into(),
+             "1".into()
+        ]);
         let mut displayer = GenericConsoleDisplayer::new(input, output, editor);
         let mut manager = create_manager_with_tasks();
         displayer.run(&mut manager);
@@ -546,7 +520,37 @@ mod tests {
         assert!(output.contains("Welcome to the ToDo console application!"));
         assert!(output.contains("Description: Test Task 1, Priority: High, Completed: false"));
         assert!(output.contains("You selected: Edit Task"));
-        assert!(output.contains("Description: New Description, Priority: High, Completed: false"));
+        assert!(output.contains("Description: Test Task 1, Priority: High, Completed: false"));
+        assert!(output.contains("Exiting ToDo application... Goodbye!"));
+    }
+
+    #[test]
+    fn test_handle_edit_task_change_fields() {
+        let input_vec = vec![   
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::EditTask).to_string(),
+            "1".into(), //ID to edit
+            MenuOption::get_input_key(&MenuOption::ListTasks).to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
+      
+        let input = Cursor::new(input);
+        let output = Cursor::new(Vec::new());
+        let editor = MockLineEditor::new(vec![ //Edited fields inputed for editor
+            "New Description".into(),
+             "3".into()
+        ]);
+        let mut displayer = GenericConsoleDisplayer::new(input, output, editor);
+        let mut manager = create_manager_with_tasks();
+        displayer.run(&mut manager);
+        let output = String::from_utf8(displayer.output.into_inner()).unwrap();
+
+        assert!(output.contains("Welcome to the ToDo console application!"));
+        assert!(output.contains("Description: Test Task 1, Priority: High, Completed: false"));
+        assert!(output.contains("You selected: Edit Task"));
+        assert!(output.contains("Description: New Description, Priority: Low, Completed: false"));
         assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
 
