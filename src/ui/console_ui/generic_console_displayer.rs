@@ -297,11 +297,21 @@ mod tests {
 
     #[test]
     fn test_display_add_task() {
-        let input = Cursor::new("1\n".to_string());
+        let input_vec = vec![
+            MenuOption::get_input_key(&MenuOption::AddTask).to_string()
+        ];
+        
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
+
+        let input = Cursor::new(input);
         let output = Cursor::new(Vec::new());
+        
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
+        
         let result = displayer.display().expect("Display failed");
         assert_eq!(result, MenuOption::AddTask);
+        
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("ToDo Operations:"));
         assert!(output.contains("1. Add Task"));
@@ -324,9 +334,12 @@ mod tests {
     fn test_handle_add_task() {
         let input = Cursor::new("Test Task\n2\n".to_string());
         let output = Cursor::new(Vec::new());
+
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
+
         displayer.handle_add_task(&mut manager).expect("Add task failed");
+        
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("You selected: Add Task"));
         assert!(output.contains("Enter task description:"));
@@ -453,11 +466,22 @@ mod tests {
 
     #[test]
     fn test_run_add_and_exit() {
-        let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
+        let input_vec = vec![
+            MenuOption::get_input_key(&MenuOption::AddTask).to_string(),
+            "Test Task".to_string(),
+            "2".to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
+
+        let input = Cursor::new(input);
         let output = Cursor::new(Vec::new());
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
+
         displayer.run(&mut manager);
+        
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("Welcome to the ToDo console application!"));
         assert!(output.contains("You selected: Add Task"));
@@ -468,11 +492,20 @@ mod tests {
 
     #[test]
     fn test_run_invalid_input() {
-        let input = Cursor::new("invalid\ne\n".to_string());
+        let input_vec = vec![
+            "invalid".to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
+
+        let input = Cursor::new(input);
         let output = Cursor::new(Vec::new());
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
+
         displayer.run(&mut manager);
+        
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("The option: invalid is invalid, please try again"));
         assert!(output.contains("Exiting ToDo application... Goodbye!"));
@@ -481,11 +514,22 @@ mod tests {
     
     #[test]
     fn test_console_displayer_run() {
-        let input = Cursor::new("1\nTest Task\n2\ne\n".to_string());
+        let input_vec = vec![
+            MenuOption::get_input_key(&MenuOption::AddTask).to_string(),
+            "Test Task".to_string(),
+            "2".to_string(),
+            MenuOption::get_input_key(&MenuOption::Exit).to_string(),
+        ];
+        let mut input = input_vec.join("\n");
+        input.push_str("\n");
+
+        let input = Cursor::new(input);
         let output = Cursor::new(Vec::new());
         let mut displayer = create_displayer_mocked_editor(input, output, Vec::new());
         let mut manager = create_manager_with_tasks();
+
         displayer.run(&mut manager);
+        
         let output = String::from_utf8(displayer.output.into_inner()).unwrap();
         assert!(output.contains("Welcome to the ToDo console application!"));
         assert!(output.contains("You selected: Add Task"));
@@ -553,5 +597,4 @@ mod tests {
         assert!(output.contains("Description: New Description, Priority: Low, Completed: false"));
         assert!(output.contains("Exiting ToDo application... Goodbye!"));
     }
-
 }
