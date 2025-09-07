@@ -1,8 +1,6 @@
 use std::io::Cursor;
 use to_do::model::priority::Priority;
-use to_do::service::{
-    manager::{Manager, ManagerTrait},
-};
+use to_do::service::manager::{Manager, ManagerTrait};
 use to_do::ui::{
     console_ui::{
         generic_console_displayer::GenericConsoleDisplayer, mock_displayer::MockDisplayer,

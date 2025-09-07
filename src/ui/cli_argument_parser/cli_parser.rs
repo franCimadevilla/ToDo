@@ -26,10 +26,21 @@ pub enum CliCommand {
 
     #[command(about = "List all existing tasks")]
     List {
-        #[arg(short = 'p', long = "pri", value_enum, required = false, help = "Filter the list of tasks by priority")]
+        #[arg(
+            short = 'p',
+            long = "pri",
+            value_enum,
+            required = false,
+            help = "Filter the list of tasks by priority"
+        )]
         priority: Option<Priority>,
 
-        #[arg(short = 'c', long = "com", required = false, help = "Filter the list of tasks by completed status")]
+        #[arg(
+            short = 'c',
+            long = "com",
+            required = false,
+            help = "Filter the list of tasks by completed status"
+        )]
         completed: Option<bool>,
     },
 
@@ -56,9 +67,13 @@ pub enum CliCommand {
         #[arg(long = "rep", help = "Replacement for the matched pattern")]
         replace: Option<String>,
 
-        #[arg(long = "pri", value_enum, help = "Priority of the TODO item (Low, Medium, High)")]
+        #[arg(
+            long = "pri",
+            value_enum,
+            help = "Priority of the TODO item (Low, Medium, High)"
+        )]
         priority: Option<Priority>,
-    }   
+    },
 }
 
 impl Cli {
@@ -69,20 +84,24 @@ impl Cli {
         displayer: &mut CliDisplayer,
     ) {
         match command {
-            CliCommand::Add { description, priority,  } => {
-                match description {
-                    Some(desc) => {
-                        manager.add_task(desc.as_ref(), &priority);
-                        displayer
-                            .notify("Task added successfully.")
-                            .expect("Failed to notify addition of a task.");
-                    },
-                    None => {
-                        displayer.handle_add_task(manager);
-                    }
+            CliCommand::Add {
+                description,
+                priority,
+            } => match description {
+                Some(desc) => {
+                    manager.add_task(desc.as_ref(), &priority);
+                    displayer
+                        .notify("Task added successfully.")
+                        .expect("Failed to notify addition of a task.");
                 }
-            }
-            CliCommand::List { priority, completed,   } => {
+                None => {
+                    displayer.handle_add_task(manager);
+                }
+            },
+            CliCommand::List {
+                priority,
+                completed,
+            } => {
                 let tasks = manager.get_tasks();
                 let mut filtered_tasks = match priority {
                     None => tasks.iter().collect::<Vec<_>>(),
@@ -155,58 +174,84 @@ impl Cli {
                         .notify("Task status toggled successfully.")
                         .expect("Failed to notify toggling of task status.");
                 }
-            },
-            CliCommand::Edit { id, pattern, replace, priority } => {
-                match id {
-                    Some(id) => {
-                        if Cli::is_task(id.as_ref(), manager, displayer) {
-                            let task = manager.get_task(id.as_ref()).expect("Failed to get the task when editing");
-                            if pattern.is_some() != replace.is_some() {
-                                displayer
+            }
+            CliCommand::Edit {
+                id,
+                pattern,
+                replace,
+                priority,
+            } => match id {
+                Some(id) => {
+                    if Cli::is_task(id.as_ref(), manager, displayer) {
+                        let task = manager
+                            .get_task(id.as_ref())
+                            .expect("Failed to get the task when editing");
+                        if pattern.is_some() != replace.is_some() {
+                            displayer
                                     .notify("Error: --pattern and --replace must both be provided or both omitted.")
                                     .expect("Failed to notify error when editing task");
-                                return;
-                            }
-
-                            let new_description : Option<String> = 
-                                if let (Some(pattern), Some(replace)) = (pattern, replace) {
-                                    if task.description.contains(&pattern) {
-                                        displayer
-                                        .notify(format!("Replacing pattern '{}' with '{}'", pattern, replace).as_ref())
-                                        .expect("Failed when notifing edition of a task");
-                                        
-                                        Some(task.description.replace(&pattern, &replace))
-                                    } else { None }
-                                } else { None };
-
-                            if let Some(priority) = priority {
-                                if !task.priority.eq(&priority) {
-                                    displayer
-                                        .notify(format!("Replacing task priority from '{}' to '{}'", task.priority, priority).as_ref())
-                                        .expect("Failed when notifing edition of a task");
-                                }
-                            }
-
-                            manager
-                                .edit_task(
-                                    id.as_ref(),
-                                    (if new_description.is_some() { new_description.unwrap()} else { task.description.clone() })
-                                        .as_ref(), 
-                                    &(if priority.is_some() { priority.unwrap() } else { task.priority})
-                                );
-                            
+                            return;
                         }
-                    },
-                    None => {
-                        displayer
-                            .handle_edit_task(manager);
+
+                        let new_description: Option<String> =
+                            if let (Some(pattern), Some(replace)) = (pattern, replace) {
+                                if task.description.contains(&pattern) {
+                                    displayer
+                                        .notify(
+                                            format!(
+                                                "Replacing pattern '{}' with '{}'",
+                                                pattern, replace
+                                            )
+                                            .as_ref(),
+                                        )
+                                        .expect("Failed when notifing edition of a task");
+
+                                    Some(task.description.replace(&pattern, &replace))
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+
+                        if let Some(priority) = priority {
+                            if !task.priority.eq(&priority) {
+                                displayer
+                                    .notify(
+                                        format!(
+                                            "Replacing task priority from '{}' to '{}'",
+                                            task.priority, priority
+                                        )
+                                        .as_ref(),
+                                    )
+                                    .expect("Failed when notifing edition of a task");
+                            }
+                        }
+
+                        manager.edit_task(
+                            id.as_ref(),
+                            (if new_description.is_some() {
+                                new_description.unwrap()
+                            } else {
+                                task.description.clone()
+                            })
+                            .as_ref(),
+                            &(if priority.is_some() {
+                                priority.unwrap()
+                            } else {
+                                task.priority
+                            }),
+                        );
                     }
                 }
-            }
+                None => {
+                    displayer.handle_edit_task(manager);
+                }
+            },
         }
     }
 
-    fn is_task(id : &str, manager: &mut Manager, displayer: &mut CliDisplayer) -> bool {
+    fn is_task(id: &str, manager: &mut Manager, displayer: &mut CliDisplayer) -> bool {
         if manager.get_task(&id).is_none() {
             displayer
                 .notify(&format!("Error: Task with ID {} not found", id))
@@ -216,5 +261,4 @@ impl Cli {
             return true;
         }
     }
-
 }
