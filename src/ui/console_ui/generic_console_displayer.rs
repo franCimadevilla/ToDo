@@ -1,6 +1,6 @@
 use crate::model::priority::Priority;
 use crate::service::manager::{Manager, ManagerTrait};
-use crate::service::menu_option::{MENU_OPTIONS, MenuOption};
+use crate::ui::menu_option::{MENU_OPTIONS, MenuOption};
 use crate::ui::displayer::Displayer;
 use crate::ui::line_editor::LineEditor;
 use std::io::{BufRead, Write};

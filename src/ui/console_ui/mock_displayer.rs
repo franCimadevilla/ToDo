@@ -1,5 +1,5 @@
 use crate::service::manager::Manager;
-use crate::service::menu_option::MenuOption;
+use crate::ui::menu_option::MenuOption;
 use crate::ui::displayer::Displayer;
 
 pub struct MockDisplayer;

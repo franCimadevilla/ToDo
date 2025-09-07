@@ -2,7 +2,7 @@ use rustyline::Editor;
 use rustyline::history::DefaultHistory;
 
 use crate::service::manager::Manager;
-use crate::service::menu_option::MenuOption;
+use crate::ui::menu_option::MenuOption;
 use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
 use crate::ui::displayer::Displayer;
 use std::io::{BufReader, Stdin, Stdout};
