@@ -21,6 +21,11 @@ impl CliDisplayer {
             ),
         }
     }
+
+    pub fn handle_add_task(&mut self, manager : &mut Manager) -> Result<(), String>{
+        self.inner
+            .handle_add_task(manager)
+    }
 }
 
 impl Displayer for CliDisplayer {

@@ -1,5 +1,6 @@
 use crate::model::priority::Priority;
 use crate::service::manager::{Manager, ManagerTrait};
+use crate::ui::cli_argument_parser::cli_displayer::CliDisplayer;
 use crate::ui::displayer::Displayer;
 use clap::{Parser, Subcommand};
 
@@ -16,7 +17,7 @@ pub struct Cli {
 pub enum CliCommand {
     Add {
         #[arg(short = 'd', long)]
-        description: String,
+        description: Option<String>,
 
         #[arg(short = 'p', long, value_enum, default_value_t = Priority::Low)]
         priority: Priority,
@@ -44,17 +45,24 @@ impl Cli {
         &self,
         command: CliCommand,
         manager: &mut Manager,
-        displayer: &mut dyn Displayer,
+        displayer: &mut CliDisplayer,
     ) {
         match command {
             CliCommand::Add {
                 description,
                 priority,
             } => {
-                manager.add_task(description.as_ref(), &priority);
-                displayer
-                    .notify("Task added successfully.")
-                    .expect("Failed to notify addition of a task.");
+                match description {
+                    Some(desc) => {
+                        manager.add_task(desc.as_ref(), &priority);
+                        displayer
+                            .notify("Task added successfully.")
+                            .expect("Failed to notify addition of a task.");
+                    },
+                    None => {
+                        let _ = displayer.handle_add_task(manager);
+                    }
+                }
             }
             CliCommand::List {
                 priority,
