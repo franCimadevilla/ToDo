@@ -140,9 +140,8 @@ impl TodoList {
             .tasks
             .iter()
             .map(|task| {
-                task.id
-                    .parse::<u32>()
-                    .expect(&format!("Failed to parse task ID: {}", task.id))
+                u32::from_str_radix(&task.id, 16)
+                .expect(&format!("Failed to parse task ID: {}", task.id))
             })
             .max()
             .unwrap_or(0)

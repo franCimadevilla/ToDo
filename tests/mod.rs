@@ -4,4 +4,8 @@ mod ui {
         #[path = "generic_console_displayer.rs"]
         mod generic_console_displayer;
     }
+    mod cli_argument_parser {
+        #[path = "cli_parser.rs"]
+        mod cli_parser;
+    }
 }

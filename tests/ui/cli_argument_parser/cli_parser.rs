@@ -1,5 +1,6 @@
 use clap::Parser;
 use to_do::ui::cli_argument_parser::cli_parser::{Cli, CliCommand};
+use to_do::ui::cli_argument_parser::trait_cli_displayer::TraitCliDisplayer;
 use to_do::{model::priority::Priority};
 use to_do::ui::{displayer::Displayer, menu_option::MenuOption};
 use to_do::service::manager::{Manager, ManagerTrait};
@@ -33,6 +34,24 @@ impl Displayer for StackMockDisplayer {
     }
     fn exit(&mut self) -> Result<(), String> {
         Ok(())
+    }
+}
+
+
+impl TraitCliDisplayer for StackMockDisplayer {
+    
+    fn handle_add_task(&mut self, _manager: &mut Manager) {
+        self.notifications.push("You selected: Add Task".into());
+    }
+
+    fn handle_edit_task(&mut self, _manager: &mut Manager) {
+        self.notifications.push("You selected: Edit Task".into());
+    }
+}
+
+impl Clone for StackMockDisplayer {
+    fn clone(&self) -> Self {
+        StackMockDisplayer { notifications: self.notifications.clone() }
     }
 }
 
@@ -338,5 +357,46 @@ fn test_evaluate_remove_error() {
     assert_eq!(
         displayer.notifications,
         vec!["Error: Task with ID 999 not found"]
+    );
+}
+
+#[test]
+fn test_evaluate_edit_pattern_success() {
+    
+}
+
+#[test]
+fn test_evaluate_edit_pattern_task_not_found() {
+
+}
+
+#[test]
+fn test_evaluate_edit_pattern_no_match() {
+
+}
+
+#[test]
+fn test_evaluate_edit_pattern_blank() {
+
+}
+
+#[test]
+fn test_evaluate_edit_alt_display() {
+    let mut displayer = StackMockDisplayer::new();
+    let mut manager = Manager::new(Box::new(displayer.clone()));
+    let cli = Cli {
+        command: Some(CliCommand::Edit {
+            id: None,
+            pattern: None,
+            replace: None,
+            priority: None
+        }),
+    };
+
+    let command = cli.command.as_ref().expect("Error during test").clone();
+    cli.evaluate_command(command, &mut manager, &mut displayer);
+    assert_eq!(
+        displayer.notifications.clone(),
+        vec!["You selected: Edit Task"]
     );
 }

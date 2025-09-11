@@ -18,6 +18,7 @@ pub mod ui {
     pub mod cli_argument_parser {
         pub mod cli_displayer;
         pub mod cli_parser;
+        pub mod trait_cli_displayer;
     }
     pub mod displayer;
     pub mod line_editor;

@@ -1,7 +1,6 @@
 use crate::model::priority::Priority;
 use crate::service::manager::{Manager, ManagerTrait};
-use crate::ui::cli_argument_parser::cli_displayer::CliDisplayer;
-use crate::ui::displayer::Displayer;
+use crate::ui::cli_argument_parser::trait_cli_displayer::TraitCliDisplayer;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -81,7 +80,7 @@ impl Cli {
         &self,
         command: CliCommand,
         manager: &mut Manager,
-        displayer: &mut CliDisplayer,
+        displayer: &mut dyn TraitCliDisplayer,
     ) {
         match command {
             CliCommand::Add {
@@ -251,7 +250,7 @@ impl Cli {
         }
     }
 
-    fn is_task(id: &str, manager: &mut Manager, displayer: &mut CliDisplayer) -> bool {
+    fn is_task(id: &str, manager: &mut Manager, displayer: &mut dyn TraitCliDisplayer) -> bool {
         if manager.get_task(&id).is_none() {
             displayer
                 .notify(&format!("Error: Task with ID {} not found", id))
