@@ -253,7 +253,7 @@ impl Cli {
     fn is_task(id: &str, manager: &mut Manager, displayer: &mut dyn TraitCliDisplayer) -> bool {
         if manager.get_task(&id).is_none() {
             displayer
-                .notify(&format!("Error: Task with ID {} not found", id))
+                .notify(&format!("Error: Task with ID: {} not found", id))
                 .expect("Failed to notify error for toggling task status");
             return false;
         } else {

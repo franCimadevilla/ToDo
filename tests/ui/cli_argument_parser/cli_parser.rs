@@ -323,7 +323,7 @@ fn test_evaluate_toggle_status_error() {
     cli.evaluate_command(command, &mut manager, &mut displayer);
     assert_eq!(
         displayer.notifications,
-        vec!["Error: Task with ID 999 not found"]
+        vec!["Error: Task with ID: 999 not found"]
     );
 }
 
@@ -356,28 +356,97 @@ fn test_evaluate_remove_error() {
     cli.evaluate_command(command, &mut manager, &mut displayer);
     assert_eq!(
         displayer.notifications,
-        vec!["Error: Task with ID 999 not found"]
+        vec!["Error: Task with ID: 999 not found"]
     );
 }
 
 #[test]
 fn test_evaluate_edit_pattern_success() {
+    let mut displayer = StackMockDisplayer::new();
+    let mut manager = Manager::new(Box::new(displayer.clone()));
+    manager.add_task("Task 1".as_ref(), &Priority::Low);
+
+    let cli = Cli {
+        command: None,
+    };
+
+    let command = 
+        CliCommand::Edit { id: Some("1".to_string()), pattern: Some("Task".to_string()),
+            replace: Some("Tarea".to_string()), priority: None  };
+    let command_list= CliCommand::List { priority: None, completed: None };
     
+    cli.evaluate_command(command, &mut manager, &mut displayer);
+    cli.evaluate_command(command_list, &mut manager, &mut displayer);
+    assert!(
+        displayer.notifications.clone()
+        .contains(&"ID: 1, Description: Tarea 1, Priority: Low, Completed: false".to_string())
+    );
 }
 
 #[test]
 fn test_evaluate_edit_pattern_task_not_found() {
+    let mut displayer = StackMockDisplayer::new();
+    let mut manager = Manager::new(Box::new(displayer.clone()));
 
+    let cli = Cli {
+        command: None,
+    };
+
+    let command = 
+        CliCommand::Edit { id: Some("1".to_string()), pattern: Some("Task".to_string()),
+            replace: Some("Tarea".to_string()), priority: None  };
+    
+    cli.evaluate_command(command, &mut manager, &mut displayer);
+    assert!(
+        displayer.notifications.clone()
+        .contains(&"Error: Task with ID: 1 not found".to_string())
+    );
 }
 
 #[test]
 fn test_evaluate_edit_pattern_no_match() {
+    let mut displayer = StackMockDisplayer::new();
+    let mut manager = Manager::new(Box::new(displayer.clone()));
+    manager.add_task("Task 1".as_ref(), &Priority::Low);
 
+    let cli = Cli {
+        command: None,
+    };
+
+    let command = 
+        CliCommand::Edit { id: Some("1".to_string()), pattern: Some("Tarea".to_string()),
+            replace: Some("Tarea".to_string()), priority: None  };
+    let command_list= CliCommand::List { priority: None, completed: None };
+    
+    cli.evaluate_command(command, &mut manager, &mut displayer);
+    cli.evaluate_command(command_list, &mut manager, &mut displayer);
+    assert!(
+        displayer.notifications.clone()
+        .contains(&"ID: 1, Description: Task 1, Priority: Low, Completed: false".to_string())
+    );
 }
 
 #[test]
-fn test_evaluate_edit_pattern_blank() {
+fn test_evaluate_edit_pattern_none_replace_not_blank() {
+    let mut displayer = StackMockDisplayer::new();
+    let mut manager = Manager::new(Box::new(displayer.clone()));
+    manager.add_task("Task 1".as_ref(), &Priority::Low);
 
+    let cli = Cli {
+        command: None,
+    };
+
+    let command = 
+        CliCommand::Edit { id: Some("1".to_string()), pattern: None,
+            replace: Some("Tarea".to_string()), priority: None  };
+    let command_list= CliCommand::List { priority: None, completed: None };
+    
+    cli.evaluate_command(command, &mut manager, &mut displayer);
+    cli.evaluate_command(command_list, &mut manager, &mut displayer);
+    assert!(
+        displayer.notifications.clone()
+        .contains(&"Error: --pattern and --replace must both be provided or both omitted.".to_string())
+    );
 }
 
 #[test]

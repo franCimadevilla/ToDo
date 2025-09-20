@@ -9,3 +9,7 @@ mod ui {
         mod cli_parser;
     }
 }
+mod model {
+        #[path = "todo_list.rs"]
+        mod todo_list;
+}
