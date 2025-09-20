@@ -1,15 +1,13 @@
 use std::io::Cursor;
 use to_do::model::priority::Priority;
-use to_do::service::{
-    manager::{Manager, ManagerTrait},
-    menu_option::MenuOption,
-};
+use to_do::service::manager::{Manager, ManagerTrait};
 use to_do::ui::{
     console_ui::{
         generic_console_displayer::GenericConsoleDisplayer, mock_displayer::MockDisplayer,
     },
     displayer::Displayer,
     line_editor::MockLineEditor,
+    menu_option::MenuOption,
 };
 
 fn create_manager_with_tasks() -> Manager {

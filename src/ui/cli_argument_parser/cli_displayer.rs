@@ -1,10 +1,10 @@
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
 
-use crate::service::manager::Manager;
-use crate::service::menu_option::MenuOption;
+use crate::{service::manager::Manager, ui::cli_argument_parser::trait_cli_displayer::TraitCliDisplayer};
 use crate::ui::console_ui::generic_console_displayer::GenericConsoleDisplayer;
 use crate::ui::displayer::Displayer;
+use crate::ui::menu_option::MenuOption;
 use std::io::{BufReader, Stdin, Stdout};
 
 pub struct CliDisplayer {
@@ -42,5 +42,15 @@ impl Displayer for CliDisplayer {
 
     fn exit(&mut self) -> Result<(), String> {
         self.inner.exit()
+    }
+}
+
+impl TraitCliDisplayer for CliDisplayer {
+    fn handle_add_task(&mut self, manager: &mut Manager) {
+        let _ = self.inner.handle_add_task(manager);
+    }
+
+    fn handle_edit_task(&mut self, manager: &mut Manager) {
+        let _ = self.inner.handle_edit_task(manager);
     }
 }

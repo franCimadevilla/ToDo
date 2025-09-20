@@ -7,7 +7,6 @@ pub mod model {
 pub mod service {
     pub mod actions;
     pub mod manager;
-    pub mod menu_option;
 }
 
 pub mod ui {
@@ -19,7 +18,9 @@ pub mod ui {
     pub mod cli_argument_parser {
         pub mod cli_displayer;
         pub mod cli_parser;
+        pub mod trait_cli_displayer;
     }
     pub mod displayer;
     pub mod line_editor;
+    pub mod menu_option;
 }

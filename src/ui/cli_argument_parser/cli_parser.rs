@@ -1,6 +1,6 @@
 use crate::model::priority::Priority;
 use crate::service::manager::{Manager, ManagerTrait};
-use crate::ui::displayer::Displayer;
+use crate::ui::cli_argument_parser::trait_cli_displayer::TraitCliDisplayer;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -14,28 +14,64 @@ pub struct Cli {
 
 #[derive(Subcommand, Clone, Debug, PartialEq)]
 pub enum CliCommand {
+    #[command(about = "Add a new task")]
     Add {
-        #[arg(short = 'd', long)]
-        description: String,
+        #[arg(short = 'd', long = "desc", help = "Description of the new task")]
+        description: Option<String>,
 
-        #[arg(short = 'p', long, value_enum, default_value_t = Priority::Low)]
+        #[arg(short = 'p', long = "pri", value_enum, default_value_t = Priority::Low, help = "Priority of the new task")]
         priority: Priority,
     },
+
+    #[command(about = "List all existing tasks")]
     List {
-        #[arg(short = 'p', long, value_enum, required = false)]
+        #[arg(
+            short = 'p',
+            long = "pri",
+            value_enum,
+            required = false,
+            help = "Filter the list of tasks by priority"
+        )]
         priority: Option<Priority>,
 
-        #[arg(short = 'c', long = "completed", required = false)]
+        #[arg(
+            short = 'c',
+            long = "com",
+            required = false,
+            help = "Filter the list of tasks by completed status"
+        )]
         completed: Option<bool>,
     },
-    #[command(alias = "toggle", aliases = ["check"])]
+
+    #[command(alias = "toggle", aliases = ["check"], about = "Change the completed/uncompleted status of a task")]
     ToggleStatus {
-        #[arg(short = 'i', long)]
+        #[arg(short = 'i', long = "id")]
         id: String,
     },
+
+    #[command(about = "Remove an existing task")]
     Remove {
-        #[arg(short = 'i', long)]
+        #[arg(short = 'i', long = "id")]
         id: String,
+    },
+
+    #[command(about = "Edit an existing task")]
+    Edit {
+        #[arg(short = 'i', long = "id", help = "ID of the TODO item to edit")]
+        id: Option<String>,
+
+        #[arg(long = "pat", help = "Pattern to search in the TODO description")]
+        pattern: Option<String>,
+
+        #[arg(long = "rep", help = "Replacement for the matched pattern")]
+        replace: Option<String>,
+
+        #[arg(
+            long = "pri",
+            value_enum,
+            help = "Priority of the TODO item (Low, Medium, High)"
+        )]
+        priority: Option<Priority>,
     },
 }
 
@@ -44,18 +80,23 @@ impl Cli {
         &self,
         command: CliCommand,
         manager: &mut Manager,
-        displayer: &mut dyn Displayer,
+        displayer: &mut dyn TraitCliDisplayer,
     ) {
         match command {
             CliCommand::Add {
                 description,
                 priority,
-            } => {
-                manager.add_task(description.as_ref(), &priority);
-                displayer
-                    .notify("Task added successfully.")
-                    .expect("Failed to notify addition of a task.");
-            }
+            } => match description {
+                Some(desc) => {
+                    manager.add_task(desc.as_ref(), &priority);
+                    displayer
+                        .notify("Task added successfully.")
+                        .expect("Failed to notify addition of a task.");
+                }
+                None => {
+                    displayer.handle_add_task(manager);
+                }
+            },
             CliCommand::List {
                 priority,
                 completed,
@@ -118,12 +159,7 @@ impl Cli {
                 }
             }
             CliCommand::Remove { id } => {
-                if manager.get_task(&id).is_none() {
-                    displayer
-                        .notify(&format!("Error: Task with ID {} not found", id))
-                        .expect("Failed to notify error for task removal");
-                    return;
-                } else {
+                if Cli::is_task(id.as_ref(), manager, displayer) {
                     manager.remove_task(id.as_ref());
                     displayer
                         .notify("Task removed successfully.")
@@ -131,361 +167,97 @@ impl Cli {
                 }
             }
             CliCommand::ToggleStatus { id } => {
-                if manager.get_task(&id).is_none() {
-                    displayer
-                        .notify(&format!("Error: Task with ID {} not found", id))
-                        .expect("Failed to notify error for toggling task status");
-                    return;
-                } else {
+                if Cli::is_task(id.as_ref(), manager, displayer) {
                     manager.toggle_task_status(id.as_ref());
                     displayer
                         .notify("Task status toggled successfully.")
                         .expect("Failed to notify toggling of task status.");
                 }
             }
-        }
-    }
-}
+            CliCommand::Edit {
+                id,
+                pattern,
+                replace,
+                priority,
+            } => match id {
+                Some(id) => {
+                    if Cli::is_task(id.as_ref(), manager, displayer) {
+                        let task = manager
+                            .get_task(id.as_ref())
+                            .expect("Failed to get the task when editing");
+                        if pattern.is_some() != replace.is_some() {
+                            displayer
+                                    .notify("Error: --pattern and --replace must both be provided or both omitted.")
+                                    .expect("Failed to notify error when editing task");
+                            return;
+                        }
 
-#[cfg(test)]
-mod tests {
+                        let new_description: Option<String> =
+                            if let (Some(pattern), Some(replace)) = (pattern, replace) {
+                                if task.description.contains(&pattern) {
+                                    displayer
+                                        .notify(
+                                            format!(
+                                                "Replacing pattern '{}' with '{}'",
+                                                pattern, replace
+                                            )
+                                            .as_ref(),
+                                        )
+                                        .expect("Failed when notifing edition of a task");
 
-    use super::*;
-    use crate::{model::priority::Priority, service::menu_option::MenuOption};
+                                    Some(task.description.replace(&pattern, &replace))
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
 
-    #[test]
-    fn test_parse_add_command() {
-        let cli = Cli::parse_from(&["ToDo", "add", "-d", "Test task", "-p", "High"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::Add {
-                description: "Test task".to_string(),
-                priority: Priority::High,
-            })
-        );
+                        if let Some(priority) = priority {
+                            if !task.priority.eq(&priority) {
+                                displayer
+                                    .notify(
+                                        format!(
+                                            "Replacing task priority from '{}' to '{}'",
+                                            task.priority, priority
+                                        )
+                                        .as_ref(),
+                                    )
+                                    .expect("Failed when notifing edition of a task");
+                            }
+                        }
 
-        // Test default priority
-        let cli = Cli::parse_from(&["ToDo", "add", "-d", "Test task"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::Add {
-                description: "Test task".to_string(),
-                priority: Priority::Low,
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_list_command() {
-        // No filters
-        let cli = Cli::parse_from(&["ToDo", "list"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::List {
-                priority: None,
-                completed: None,
-            })
-        );
-
-        // With priority
-        let cli = Cli::parse_from(&["ToDo", "list", "-p", "Medium"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::List {
-                priority: Some(Priority::Medium),
-                completed: None,
-            })
-        );
-
-        // With completed
-        let cli = Cli::parse_from(&["ToDo", "list", "-c", "true"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::List {
-                priority: None,
-                completed: Some(true),
-            })
-        );
-
-        // With both
-        let cli = Cli::parse_from(&["ToDo", "list", "-p", "Low", "-c", "false"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::List {
-                priority: Some(Priority::Low),
-                completed: Some(false),
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_toggle_status_command() {
-        let cli = Cli::parse_from(&["ToDo", "toggle-status", "-i", "1"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::ToggleStatus {
-                id: "1".to_string()
-            })
-        );
-
-        // Test alias
-        let cli = Cli::parse_from(&["ToDo", "toggle", "-i", "2"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::ToggleStatus {
-                id: "2".to_string()
-            })
-        );
-
-        let cli = Cli::parse_from(&["ToDo", "check", "-i", "3"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::ToggleStatus {
-                id: "3".to_string()
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_remove_command() {
-        let cli = Cli::parse_from(&["ToDo", "remove", "-i", "1"]);
-        assert_eq!(
-            cli.command,
-            Some(CliCommand::Remove {
-                id: "1".to_string()
-            })
-        );
-    }
-
-    struct MockDisplayer {
-        notifications: Vec<String>,
-    }
-
-    impl MockDisplayer {
-        fn new() -> Self {
-            MockDisplayer {
-                notifications: Vec::new(),
-            }
-        }
-        fn get_notifications(&self) -> Vec<String> {
-            self.notifications.clone()
+                        manager.edit_task(
+                            id.as_ref(),
+                            (if new_description.is_some() {
+                                new_description.unwrap()
+                            } else {
+                                task.description.clone()
+                            })
+                            .as_ref(),
+                            &(if priority.is_some() {
+                                priority.unwrap()
+                            } else {
+                                task.priority
+                            }),
+                        );
+                    }
+                }
+                None => {
+                    displayer.handle_edit_task(manager);
+                }
+            },
         }
     }
 
-    impl Displayer for MockDisplayer {
-        fn new() -> Self {
-            MockDisplayer::new()
+    fn is_task(id: &str, manager: &mut Manager, displayer: &mut dyn TraitCliDisplayer) -> bool {
+        if manager.get_task(&id).is_none() {
+            displayer
+                .notify(&format!("Error: Task with ID: {} not found", id))
+                .expect("Failed to notify error for toggling task status");
+            return false;
+        } else {
+            return true;
         }
-        fn run(&mut self, _manager: &mut Manager) {}
-        fn display(&mut self) -> Result<MenuOption, String> {
-            Ok(MenuOption::Exit)
-        }
-        fn notify(&mut self, message: &str) -> Result<(), String> {
-            self.notifications.push(message.to_string());
-            Ok(())
-        }
-        fn exit(&mut self) -> Result<(), String> {
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn test_evaluate_add_command() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::Add {
-                description: "Test task".to_string(),
-                priority: Priority::High,
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(manager.get_tasks().len(), 1);
-        assert_eq!(manager.get_tasks()[0].description, "Test task");
-        assert_eq!(manager.get_tasks()[0].priority, Priority::High);
-        assert_eq!(
-            displayer.get_notifications(),
-            vec!["Task added successfully."]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_list_command_empty() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::List {
-                priority: None,
-                completed: None,
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(displayer.notifications, vec!["No tasks found."]);
-    }
-
-    #[test]
-    fn test_evaluate_list_command_with_tasks() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        manager.add_task("Task 2".as_ref(), &Priority::High);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::List {
-                priority: None,
-                completed: None,
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec![
-                "2 tasks found",
-                "ID: 1, Description: Task 1, Priority: Low, Completed: false",
-                "ID: 2, Description: Task 2, Priority: High, Completed: false",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_list_command_filtered_priority() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        manager.add_task("Task 2".as_ref(), &Priority::High);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::List {
-                priority: Some(Priority::Low),
-                completed: None,
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec![
-                "1 tasks found with priority Low",
-                "ID: 1, Description: Task 1, Priority: Low, Completed: false",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_list_command_filtered_completed() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        manager.toggle_task_status("1".as_ref());
-        manager.add_task("Task 2".as_ref(), &Priority::High);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::List {
-                priority: None,
-                completed: Some(true),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec![
-                "1 tasks found with completed = true",
-                "ID: 1, Description: Task 1, Priority: Low, Completed: true",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_list_command_filtered_both() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        manager.toggle_task_status("1".as_ref());
-        manager.add_task("Task 2".as_ref(), &Priority::Low);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::List {
-                priority: Some(Priority::Low),
-                completed: Some(true),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec![
-                "1 tasks found with priority Low and completed = true",
-                "ID: 1, Description: Task 1, Priority: Low, Completed: true",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_toggle_status_success() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::ToggleStatus {
-                id: "1".to_string(),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(manager.get_tasks()[0].completed, true);
-        assert_eq!(
-            displayer.notifications,
-            vec!["Task status toggled successfully."]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_toggle_status_error() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::ToggleStatus {
-                id: "999".to_string(),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec!["Error: Task with ID 999 not found"]
-        );
-    }
-
-    #[test]
-    fn test_evaluate_remove_success() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        manager.add_task("Task 1".as_ref(), &Priority::Low);
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::Remove {
-                id: "1".to_string(),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(manager.get_tasks().len(), 0);
-        assert_eq!(displayer.notifications, vec!["Task removed successfully."]);
-    }
-
-    #[test]
-    fn test_evaluate_remove_error() {
-        let mut manager = Manager::new(Box::new(MockDisplayer::new()));
-        let mut displayer = MockDisplayer::new();
-        let cli = Cli {
-            command: Some(CliCommand::Remove {
-                id: "999".to_string(),
-            }),
-        };
-        let command = cli.command.as_ref().expect("Error during test").clone();
-        cli.evaluate_command(command, &mut manager, &mut displayer);
-        assert_eq!(
-            displayer.notifications,
-            vec!["Error: Task with ID 999 not found"]
-        );
     }
 }

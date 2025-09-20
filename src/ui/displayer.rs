@@ -1,5 +1,5 @@
 use crate::service::manager::Manager;
-use crate::service::menu_option::MenuOption;
+use crate::ui::menu_option::MenuOption;
 
 /// Trait defining the interface for displaying and interacting with the ToDo application UI.
 pub trait Displayer: Send + Sync {
